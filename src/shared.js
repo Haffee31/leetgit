@@ -93,6 +93,8 @@ export function renderSolutionMarkdown(submission) {
     : "";
 
   return `# ${submission.problemNumber}. ${submission.title}
+  
+<br>**Problem:** ${submission.problemUrl}<br>
 
 **Difficulty:** ${submission.difficulty}<br>
 **Topics:** ${topics}<br>
@@ -100,7 +102,6 @@ export function renderSolutionMarkdown(submission) {
 **Status:** ${submission.status}<br>
 **Submitted:** ${submitted.date} ${submitted.time} local time
 ${metrics}
-**Problem:** ${submission.problemUrl}
 
 <!-- leetgit:submissionId=${submission.submissionId} codeHash=${submission.codeHash} -->
 
