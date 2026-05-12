@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>LeetGit</title>
+    <link rel="stylesheet" href="src/popup.css">
+  </head>
+  <body>
+    <main class="popup">
+      <header class="header">
+        <div>
+          <h1>LeetGit</h1>
+          <button id="repo-link" class="repo-link" type="button">Not connected</button>
+        </div>
+        <span id="connection-pill" class="pill">Checking</span>
+      </header>
+
+      <div id="token-warning" class="warning" hidden></div>
+
+      <section>
+        <h2>Recent syncs</h2>
+        <div id="recent-syncs" class="recent-list">
+          <div class="empty">No synced submissions yet.</div>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <button id="settings" type="button">Settings</button>
+        <button id="view-repo" type="button">View Repo</button>
+      </footer>
+    </main>
+    <script type="module" src="src/popup.js"></script>
+  </body>
+</html>
