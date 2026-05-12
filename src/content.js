@@ -75,7 +75,10 @@
         return;
       }
       if (response.result?.skipped) {
-        setState("idle", `LeetGit ready - skipped ${response.result.reason}`);
+        const skipTitle = response.result.reason === "duplicate"
+          ? "LeetGit ready — commit skipped (same code & notes)"
+          : `LeetGit ready — skipped (${response.result.reason})`;
+        setState("idle", skipTitle);
         hydrateState();
         return;
       }
@@ -104,7 +107,10 @@
     }
     if (message?.type === "LEETGIT_SYNC_SKIPPED") {
       recentSyncs = message.recentSyncs || recentSyncs;
-      setState("idle", `LeetGit ready - skipped ${message.reason}`);
+      const skipTitle = message.reason === "duplicate"
+        ? "LeetGit ready — commit skipped (same code & notes)"
+        : `LeetGit ready — skipped (${message.reason})`;
+      setState("idle", skipTitle);
       renderPanel();
       return;
     }
@@ -221,7 +227,7 @@
         <div class="leetgit-row">
           <div>
             <div class="leetgit-title">${titleHtml}</div>
-            <div class="leetgit-meta">${escapeHtml(sync.language)} · ${sync.status === "Accepted" ? "✅" : "❌"} ${escapeHtml(sync.status)} · ${relativeTime(sync.submittedAt)}${sync.duplicate ? ` · <span class="leetgit-badge">duplicate</span>` : ""}</div>
+            <div class="leetgit-meta">${escapeHtml(sync.language)} · ${sync.status === "Accepted" ? "✅" : "❌"} ${escapeHtml(sync.status)} · ${relativeTime(sync.submittedAt)}${sync.duplicate ? ` · <span class="leetgit-badge" title="Same code and notes as last commit">Commit skipped</span>` : ""}</div>
           </div>
           ${sync.githubUrl ? `<a class="leetgit-link" href="${escapeAttribute(sync.githubUrl)}" target="_blank" rel="noreferrer">↗</a>` : ""}
         </div>

@@ -155,7 +155,6 @@
   }
 
   async function fetchProblemNote(titleSlug) {
-    if (problemNotes.has(titleSlug)) return problemNotes.get(titleSlug);
     try {
       const csrfToken = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || "";
       const response = await originalFetch("/graphql", {
