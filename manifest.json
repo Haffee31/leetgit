@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "LeetGit",
+  "version": "0.1.0",
+  "description": "Automatically sync LeetCode submissions to GitHub.",
+  "permissions": ["storage", "notifications"],
+  "host_permissions": [
+    "https://leetcode.com/*",
+    "https://api.github.com/*"
+  ],
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "LeetGit",
+    "default_popup": "popup.html",
+    "default_icon": "icons/icon.svg"
+  },
+  "icons": {
+    "128": "icons/icon.svg"
+  },
+  "options_page": "options.html",
+  "content_scripts": [
+    {
+      "matches": ["https://leetcode.com/problems/*"],
+      "js": ["src/injected.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://leetcode.com/problems/*"],
+      "js": ["src/content.js"],
+      "run_at": "document_start"
+    }
+  ]
+}
