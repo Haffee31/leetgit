@@ -94,10 +94,10 @@ export function renderSolutionMarkdown(submission) {
 
   return `# ${submission.problemNumber}. ${submission.title}
 
-**Difficulty:** ${submission.difficulty}
-**Topics:** ${topics}
-**Language:** ${submission.language}
-**Status:** ${submission.status}
+**Difficulty:** ${submission.difficulty}<br>
+**Topics:** ${topics}<br>
+**Language:** ${submission.language}<br>
+**Status:** ${submission.status}<br>
 **Submitted:** ${submitted.date} ${submitted.time} local time
 ${metrics}
 **Problem:** ${submission.problemUrl}
