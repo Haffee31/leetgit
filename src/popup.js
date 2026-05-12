@@ -35,7 +35,7 @@ function render() {
   viewRepoButton.disabled = !connected;
 
   renderTokenWarning();
-  recentSyncs.innerHTML = (state.recentSyncs || []).slice(0, 10).map(renderSyncRow).join("") || (
+  recentSyncs.innerHTML = (state.recentSyncs || []).slice(0, 3).map(renderSyncRow).join("") || (
     `<div class="empty">No synced submissions yet.</div>`
   );
 }

@@ -543,6 +543,7 @@ async function rememberRecentSync(submission, result) {
     language: submission.language,
     status: submission.status,
     submittedAt: submission.submittedAt,
+    problemUrl: submission.problemUrl || null,
     githubUrl: result.githubUrl || null,
     submissionPath: result.submissionPath || null,
     duplicate: result.reason === "duplicate",

@@ -30,6 +30,7 @@
   let lastFailure = null;
   let pendingSubmission = null;
   let settings = null;
+  let isConnected = null;
 
   window.addEventListener("message", (event) => {
     if (event.source !== window) return;
@@ -146,15 +147,31 @@
     root.classList.add("leetgit-fixed");
     setState("idle");
     hydrateState();
+    document.addEventListener("click", (event) => {
+      if (panelOpen && root && !root.contains(event.target)) {
+        panelOpen = false;
+        panel.hidden = true;
+      }
+    });
   }
 
   async function hydrateState() {
-    const response = await chrome.runtime.sendMessage({ type: "LEETGIT_GET_STATE" }).catch(() => null);
-    if (!response?.ok) return;
-    recentSyncs = response.recentSyncs || [];
-    lastFailure = response.lastFailure || null;
-    lastError = lastFailure?.error || "";
-    if (lastFailure) setState("error", "Sync failed - click for details");
+    const [stateResponse, configResponse] = await Promise.all([
+      chrome.runtime.sendMessage({ type: "LEETGIT_GET_STATE" }).catch(() => null),
+      chrome.runtime.sendMessage({ type: "LEETGIT_GET_CONFIG" }).catch(() => null)
+    ]);
+    if (stateResponse?.ok) {
+      recentSyncs = stateResponse.recentSyncs || [];
+      lastFailure = stateResponse.lastFailure || null;
+      lastError = lastFailure?.error || "";
+      if (lastFailure) setState("error", "Sync failed - click for details");
+    }
+    if (configResponse?.ok) {
+      const cfg = configResponse.config;
+      settings = cfg?.settings || null;
+      isConnected = Boolean(cfg?.token && cfg?.repo?.owner && cfg?.repo?.name);
+      if (root) root.dataset.connected = isConnected ? "true" : "false";
+    }
     renderPanel();
   }
 
@@ -186,7 +203,7 @@
 
   function renderPanel() {
     if (!panel) return;
-    const commitMessageForm = `
+    const commitMessageForm = settings?.commitMessageMode === "prompt" ? `
       <form class="leetgit-commit-message" ${pendingSubmission ? "" : "hidden"}>
         <textarea class="leetgit-commit-input" rows="3" placeholder="Commit message for this submission"></textarea>
         <div class="leetgit-actions">
@@ -194,16 +211,22 @@
           <button class="leetgit-action" data-action="sync-template-message" type="button">Use template</button>
         </div>
       </form>
-    `;
-    const rows = recentSyncs.slice(0, 5).map((sync) => `
-      <div class="leetgit-row">
-        <div>
-          <div class="leetgit-title">${escapeHtml(`${sync.problemNumber}. ${sync.title}`)}</div>
-          <div class="leetgit-meta">${escapeHtml(sync.language)} · ${sync.status === "Accepted" ? "✅" : "❌"} ${escapeHtml(sync.status)} · ${relativeTime(sync.submittedAt)}${sync.duplicate ? ` · <span class="leetgit-badge">duplicate</span>` : ""}</div>
+    ` : "";
+    const rows = recentSyncs.slice(0, 5).map((sync) => {
+      const titleText = escapeHtml(`${sync.problemNumber}. ${sync.title}`);
+      const titleHtml = sync.problemUrl
+        ? `<a class="leetgit-problem-link" href="${escapeAttribute(sync.problemUrl)}" target="_blank" rel="noreferrer">${titleText}</a>`
+        : titleText;
+      return `
+        <div class="leetgit-row">
+          <div>
+            <div class="leetgit-title">${titleHtml}</div>
+            <div class="leetgit-meta">${escapeHtml(sync.language)} · ${sync.status === "Accepted" ? "✅" : "❌"} ${escapeHtml(sync.status)} · ${relativeTime(sync.submittedAt)}${sync.duplicate ? ` · <span class="leetgit-badge">duplicate</span>` : ""}</div>
+          </div>
+          ${sync.githubUrl ? `<a class="leetgit-link" href="${escapeAttribute(sync.githubUrl)}" target="_blank" rel="noreferrer">↗</a>` : ""}
         </div>
-        ${sync.githubUrl ? `<a class="leetgit-link" href="${escapeAttribute(sync.githubUrl)}" target="_blank" rel="noreferrer">↗</a>` : ""}
-      </div>
-    `).join("");
+      `;
+    }).join("");
 
     panel.innerHTML = `
       <div class="leetgit-panel-head">
@@ -215,7 +238,7 @@
       <div class="leetgit-section-title">Recent syncs</div>
       <div class="leetgit-list">${rows || `<div class="leetgit-empty">No synced submissions yet.</div>`}</div>
       <div class="leetgit-actions">
-        <button class="leetgit-action" data-action="custom-message" type="button" ${pendingSubmission ? "" : "disabled"}>Custom commit message</button>
+        ${settings?.commitMessageMode === "prompt" ? `<button class="leetgit-action" data-action="custom-message" type="button" ${pendingSubmission ? "" : "disabled"}>Custom commit message</button>` : ""}
         ${lastFailure ? `<button class="leetgit-action" data-action="retry" type="button">Retry last failed sync</button>` : ""}
       </div>
       ${commitMessageForm}
@@ -228,6 +251,10 @@
       if (!response?.ok) {
         lastError = response?.error || "Retry failed";
         setState("error", "Retry failed - click for details");
+        renderPanel();
+      } else {
+        lastError = "";
+        lastFailure = null;
         renderPanel();
       }
     });
@@ -279,6 +306,7 @@
         margin-left: 0;
       }
       #leetgit-button {
+        position: relative;
         width: 34px;
         height: 34px;
         border: 1px solid rgba(148, 163, 184, 0.45);
@@ -290,6 +318,20 @@
         cursor: pointer;
         box-shadow: 0 10px 25px rgba(15, 23, 42, 0.12);
         transition: border-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+      }
+      #leetgit-root[data-connected] #leetgit-button::before {
+        content: "";
+        position: absolute;
+        width: 9px;
+        height: 9px;
+        right: 1px;
+        bottom: 1px;
+        border-radius: 999px;
+        background: #ef4444;
+        border: 2px solid #fff;
+      }
+      #leetgit-root[data-connected="true"] #leetgit-button::before {
+        background: #22c55e;
       }
       #leetgit-button:hover {
         transform: translateY(-1px);
@@ -381,6 +423,8 @@
       .leetgit-list {
         display: grid;
         gap: 6px;
+        max-height: 210px;
+        overflow-y: auto;
       }
       .leetgit-row {
         padding: 8px;
@@ -391,6 +435,14 @@
         font-size: 13px;
         font-weight: 700;
         color: #0f172a;
+      }
+      .leetgit-problem-link {
+        color: inherit;
+        text-decoration: none;
+      }
+      .leetgit-problem-link:hover {
+        color: #2563eb;
+        text-decoration: underline;
       }
       .leetgit-meta,
       .leetgit-empty {
