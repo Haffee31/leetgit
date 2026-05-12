@@ -5,6 +5,7 @@
   const pendingSubmissions = new Map();
   const completedSubmissions = new Set();
   const activePolls = new Set();
+  const problemNotes = new Map();
 
   const SUBMIT_PATTERN = /\/problems\/([^/]+)\/submit\/?/;
   const CHECK_PATTERN = /\/submissions\/detail\/(\d+)\/check\/?/;
@@ -100,6 +101,17 @@
     }
   }
 
+  async function handleGraphQlNoteResponse(url, requestBody, response) {
+    if (!GRAPHQL_PATTERN.test(url)) return;
+    const parsed = parseBody(requestBody);
+    if (parsed.operationName !== "questionNote") return;
+    const data = await readJson(response);
+    const raw = data?.data?.question?.note ?? null;
+    if (raw == null) return;
+    const titleSlug = parsed.variables?.titleSlug || getTitleSlugFromLocation();
+    if (titleSlug) problemNotes.set(titleSlug, stripHtml(raw));
+  }
+
   async function handleCheckResponse(url, response) {
     const match = url.match(CHECK_PATTERN);
     if (!match) return;
@@ -113,12 +125,15 @@
     emitSubmissionResult(submissionId, pending, data);
   }
 
-  function emitSubmissionResult(submissionId, pending, data) {
+  async function emitSubmissionResult(submissionId, pending, data) {
     if (completedSubmissions.has(String(submissionId))) return;
     completedSubmissions.add(String(submissionId));
 
     const status = data.status_msg || data.status || "";
     postDiagnostic("check-complete", { submissionId, status });
+
+    const notes = await fetchProblemNote(pending.titleSlug);
+
     window.postMessage({
       type: "LEETGIT_PAGE_SUBMISSION_CAPTURED",
       payload: {
@@ -131,11 +146,59 @@
         runtime: data.status_runtime || data.runtime || null,
         runtimePercentile: data.runtime_percentile ?? data.runtimePercentile ?? null,
         memory: data.status_memory || data.memory || null,
-        memoryPercentile: data.memory_percentile ?? data.memoryPercentile ?? null
+        memoryPercentile: data.memory_percentile ?? data.memoryPercentile ?? null,
+        notes
       }
     });
 
     pendingSubmissions.delete(submissionId);
+  }
+
+  async function fetchProblemNote(titleSlug) {
+    if (problemNotes.has(titleSlug)) return problemNotes.get(titleSlug);
+    try {
+      const csrfToken = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || "";
+      const response = await originalFetch("/graphql", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "content-type": "application/json",
+          "x-csrftoken": csrfToken
+        },
+        body: JSON.stringify({
+          operationName: "questionNote",
+          query: `query questionNote($titleSlug: String!) {
+            question(titleSlug: $titleSlug) { note }
+          }`,
+          variables: { titleSlug }
+        })
+      });
+      if (!response.ok) return "";
+      const json = await response.json();
+      const raw = json?.data?.question?.note || "";
+      const note = stripHtml(raw);
+      problemNotes.set(titleSlug, note);
+      return note;
+    } catch {
+      return "";
+    }
+  }
+
+  function stripHtml(html) {
+    return String(html || "")
+      .replace(/<\/p>/gi, "\n")
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<li>/gi, "- ")
+      .replace(/<\/li>/gi, "\n")
+      .replace(/<[^>]+>/g, "")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#039;/g, "'")
+      .replace(/&nbsp;/g, " ")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
   }
 
   async function pollSubmissionResult(submissionId) {
@@ -228,7 +291,8 @@
     const responseWithRequest = response.clone();
     responseWithRequest.__leetGitRequestBody = requestBody;
     handleSubmitResponse(url, responseWithRequest);
-    handleCheckResponse(url, response);
+    handleCheckResponse(url, response.clone());
+    handleGraphQlNoteResponse(url, requestBody, response.clone());
     return response;
   };
 

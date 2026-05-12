@@ -11,6 +11,7 @@ import {
   buildSubmissionFilename,
   buildSubmissionPath,
   extractCodeHash,
+  extractNotesHash,
   normalizeLeetCodeStatus,
   parseHistoryEntries,
   parseMemoryMb,
@@ -127,6 +128,7 @@ async function syncCapturedSubmission(raw, tabId = null) {
   try {
     const metadata = await fetchProblemMetadata(raw.titleSlug);
     const codeHash = await sha256(raw.code);
+    const notesHash = await sha256(raw.notes || "");
     submission = {
       problemNumber: Number(metadata.problemNumber),
       title: metadata.title,
@@ -141,10 +143,12 @@ async function syncCapturedSubmission(raw, tabId = null) {
       memoryMb: parseMemoryMb(raw.memory),
       memoryPercentile: parsePercentile(raw.memoryPercentile),
       code: raw.code,
+      notes: raw.notes || "",
       submittedAt: raw.submittedAt || new Date().toISOString(),
       submissionId: String(raw.submissionId),
       commitMessage: raw.commitMessage || "",
-      codeHash
+      codeHash,
+      notesHash
     };
 
     notifyTab(tabId, {
@@ -249,8 +253,9 @@ async function syncToGitHub(submission, config) {
   if (config.settings.skipDuplicates && previousEntries.length) {
     const latestMarkdown = await readBlobFromTree(branch.tree, previousEntries[0].filePath || siblingPath(historyPath, previousEntries[0].file), config);
     const latestHash = extractCodeHash(latestMarkdown);
+    const latestNotesHash = extractNotesHash(latestMarkdown) ?? "0".repeat(64);
     const latestStatus = previousEntries[0].status.replace(/^[✅❌]\s*/, "");
-    if (latestHash === submission.codeHash && latestStatus === submission.status) {
+    if (latestHash === submission.codeHash && latestNotesHash === submission.notesHash && latestStatus === submission.status) {
       const duplicatePath = siblingPath(historyPath, previousEntries[0].file);
       return {
         skipped: true,

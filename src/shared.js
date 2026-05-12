@@ -103,14 +103,14 @@ export function renderSolutionMarkdown(submission) {
 **Submitted:** ${submitted.date} ${submitted.time} local time
 ${metrics}
 
-<!-- leetgit:submissionId=${submission.submissionId} codeHash=${submission.codeHash} -->
+<!-- leetgit:submissionId=${submission.submissionId} codeHash=${submission.codeHash} notesHash=${submission.notesHash || "0".repeat(64)} -->
 
 ## Solution
 
 \`\`\`${submission.language}
 ${submission.code}
 \`\`\`
-`;
+${submission.notes?.trim() ? `\n## Notes\n\n${submission.notes.trim()}\n` : ""}`;
 }
 
 export function createHistoryEntry(submission, filename) {
@@ -186,6 +186,17 @@ export function renderCommitMessage(template, submission) {
 export function extractCodeHash(markdown) {
   const match = markdown?.match(/codeHash=([a-f0-9]{64})/);
   return match ? match[1] : null;
+}
+
+export function extractNotesHash(markdown) {
+  const match = markdown?.match(/notesHash=([a-f0-9]{64})/);
+  return match ? match[1] : null;
+}
+
+export function extractNotes(markdown) {
+  if (!markdown) return "";
+  const match = markdown.match(/^## Notes\s*\n([\s\S]*)/m);
+  return match ? match[1].trim() : "";
 }
 
 export function normalizeLeetCodeStatus(status) {

@@ -6,6 +6,8 @@ import {
   buildSubmissionFilename,
   buildSubmissionPath,
   extractCodeHash,
+  extractNotes,
+  extractNotesHash,
   parseHistoryEntries,
   renderHistoryMarkdown,
   renderSolutionMarkdown
@@ -27,7 +29,9 @@ const submission = {
   code: "class Solution:\n    pass",
   submittedAt: "2026-05-11T13:45:00.000Z",
   submissionId: "123",
-  codeHash: "a".repeat(64)
+  codeHash: "a".repeat(64),
+  notesHash: "b".repeat(64),
+  notes: "My approach: use a hash map."
 };
 
 test("builds stable problem, submission, and history paths", () => {
@@ -37,18 +41,29 @@ test("builds stable problem, submission, and history paths", () => {
   assert.equal(buildHistoryPath(submission, "daily"), "daily/0001-two-sum/history.md");
 });
 
-test("renders accepted solution markdown with metrics and metadata", () => {
+test("renders accepted solution markdown with metrics, notes, and hashes in comment", () => {
   const markdown = renderSolutionMarkdown(submission);
   assert.match(markdown, /# 1\. Two Sum/);
   assert.match(markdown, /\*\*Runtime:\*\* 52 ms \(beats 87%\)/);
   assert.match(markdown, /leetgit:submissionId=123 codeHash=aaaaaaaa/);
+  assert.match(markdown, new RegExp(`notesHash=${"b".repeat(64)}`));
+  assert.match(markdown, /## Notes\n\nMy approach: use a hash map\./);
   assert.equal(extractCodeHash(markdown), "a".repeat(64));
+  assert.equal(extractNotesHash(markdown), "b".repeat(64));
 });
 
 test("omits metrics for non-accepted submissions", () => {
   const markdown = renderSolutionMarkdown({ ...submission, status: "Wrong Answer" });
   assert.doesNotMatch(markdown, /\*\*Runtime:\*\*/);
   assert.doesNotMatch(markdown, /\*\*Memory:\*\*/);
+});
+
+test("extractNotes returns notes content when present, empty string otherwise", () => {
+  const markdown = renderSolutionMarkdown(submission);
+  assert.equal(extractNotes(markdown), "My approach: use a hash map.");
+  assert.equal(extractNotes(renderSolutionMarkdown({ ...submission, notes: "" })), "");
+  assert.equal(extractNotes(""), "");
+  assert.equal(extractNotes(null), "");
 });
 
 test("renders newest history entry first and parses existing entries", () => {
