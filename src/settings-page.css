@@ -1,0 +1,294 @@
+:root {
+  --leetcode-green: #2db55d;
+  --leetcode-green-dark: #24984d;
+  --leetcode-orange: #ffa116;
+  --leetcode-orange-dark: #e28a00;
+  color-scheme: light;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #162033;
+  background: #f6f8fb;
+}
+
+body {
+  margin: 0;
+}
+
+.shell {
+  max-width: 920px;
+  margin: 40px auto;
+  padding: 0 20px 48px;
+}
+
+.shell.narrow {
+  max-width: 760px;
+}
+
+.page-head,
+.header-actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.page-head {
+  margin-bottom: 24px;
+}
+
+.header-actions {
+  align-items: center;
+  gap: 10px;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 30px;
+  line-height: 1.15;
+}
+
+h2 {
+  font-size: 18px;
+  margin-bottom: 6px;
+}
+
+p,
+.hint {
+  color: #5f6f86;
+  line-height: 1.5;
+}
+
+.stack {
+  display: grid;
+  gap: 14px;
+}
+
+details,
+.onboarding-step,
+.setup-panel {
+  background: #fff;
+  border: 1px solid #dce3ee;
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
+}
+
+details {
+  padding: 0 18px 18px;
+}
+
+summary {
+  cursor: pointer;
+  font-weight: 800;
+  padding: 18px 0;
+}
+
+.section-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.field-wide {
+  grid-column: 1 / -1;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #0f172a;
+  font: inherit;
+  padding: 10px 11px;
+}
+
+textarea {
+  resize: vertical;
+}
+
+.token-row,
+.button-row,
+.save-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.token-row input {
+  flex: 1;
+}
+
+button,
+.button-link,
+.file-button {
+  border: 1px solid var(--leetcode-green);
+  border-radius: 6px;
+  background: var(--leetcode-green);
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  line-height: 1.2;
+  padding: 9px 13px;
+  text-decoration: none;
+  text-align: center;
+}
+
+.small-button,
+.secondary,
+.ghost-link,
+.file-button {
+  border-color: var(--leetcode-orange);
+  background: #fff8eb;
+  color: #8a5200;
+}
+
+.danger {
+  border-color: #dc2626;
+  background: #dc2626;
+}
+
+.ghost-link {
+  border-radius: 6px;
+  padding: 8px 12px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.file-button input {
+  display: none;
+}
+
+.check-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.radio-stack {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #334155;
+  font-weight: 700;
+}
+
+.check-row input {
+  width: 18px;
+  height: 18px;
+}
+
+.save-bar {
+  position: sticky;
+  bottom: 0;
+  justify-content: flex-end;
+  border: 1px solid #dce3ee;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  padding: 12px;
+  backdrop-filter: blur(10px);
+}
+
+.section-message {
+  min-height: 0;
+  margin-bottom: 0;
+  border-radius: 6px;
+  color: var(--leetcode-green-dark);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.35;
+  transition: margin 160ms ease, padding 160ms ease;
+}
+
+.section-message:not(:empty) {
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  background: #ecfdf5;
+}
+
+.section-message.is-error:not(:empty) {
+  color: #991b1b;
+  background: #fef2f2;
+}
+
+.onboarding-step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 18px;
+  padding: 18px;
+  margin-bottom: 16px;
+}
+
+.setup-panel {
+  padding: 18px;
+  margin-bottom: 16px;
+}
+
+.step-number {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: #2563eb;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+}
+
+.onboarding-step .button-row {
+  margin-top: 12px;
+}
+
+.onboarding-step .button-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 20px;
+  max-width: 220px;
+  white-space: normal;
+}
+
+.step-number {
+  background: var(--leetcode-orange);
+}
+
+code {
+  background: #eef2ff;
+  border-radius: 4px;
+  color: #3730a3;
+  padding: 2px 5px;
+}
+
+@media (max-width: 720px) {
+  .page-head,
+  .header-actions,
+  .section-grid,
+  .check-grid,
+  .button-row,
+  .save-bar {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}

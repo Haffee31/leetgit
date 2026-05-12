@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>LeetGit Settings</title>
+    <link rel="stylesheet" href="src/settings-page.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="page-head">
+        <div>
+          <h1>LeetGit Settings</h1>
+          <p>Connect GitHub, choose what to sync, and tune the markdown output.</p>
+        </div>
+        <div class="header-actions">
+          <a class="ghost-link" href="onboarding.html">Setup guide</a>
+          <a class="ghost-link" href="https://leetcode.com/problemset/" target="_blank" rel="noreferrer">Open LeetCode</a>
+        </div>
+      </header>
+
+      <form id="settings-form" class="stack">
+        <details open data-section="repository">
+          <summary>Repository</summary>
+          <div class="section-message" data-message-for="repository" role="status"></div>
+          <div class="section-grid">
+            <label class="field field-wide">
+              <span>Personal access token</span>
+              <div class="token-row">
+                <input id="token" type="password" autocomplete="off" placeholder="github_pat_...">
+                <button id="toggle-token" type="button" class="small-button">Show</button>
+              </div>
+            </label>
+            <label class="field">
+              <span>Connected repo</span>
+              <select id="repo-select">
+                <option value="">Load repos from token</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Branch</span>
+              <input id="branch" type="text" placeholder="main">
+            </label>
+            <label class="field">
+              <span>Subfolder</span>
+              <input id="subfolder" type="text" placeholder="optional/path">
+            </label>
+            <div class="button-row field-wide">
+              <button id="load-repos" type="button">Load repos</button>
+              <button id="test-connection" type="button">Test connection</button>
+            </div>
+          </div>
+        </details>
+
+        <details open data-section="sync">
+          <summary>What to sync</summary>
+          <div class="section-message" data-message-for="sync" role="status"></div>
+          <div class="check-grid" id="status-checks"></div>
+          <label class="check-row">
+            <input id="skip-duplicates" type="checkbox">
+            <span>Skip duplicate submissions</span>
+          </label>
+        </details>
+
+        <details data-section="format">
+          <summary>File format</summary>
+          <div class="section-message" data-message-for="format" role="status"></div>
+          <div class="radio-stack">
+            <label class="check-row">
+              <input type="radio" name="commit-mode" value="template">
+              <span>Use commit message template automatically</span>
+            </label>
+            <label class="check-row">
+              <input type="radio" name="commit-mode" value="prompt">
+              <span>Ask me for a commit message every time</span>
+            </label>
+          </div>
+          <label class="field field-wide">
+            <span>Commit message template</span>
+            <input id="commit-template" type="text">
+          </label>
+          <p class="hint">Available variables: {number}, {title}, {language}, {status}, {difficulty}</p>
+        </details>
+
+        <details data-section="notifications">
+          <summary>Notifications</summary>
+          <div class="section-message" data-message-for="notifications" role="status"></div>
+          <label class="check-row">
+            <input id="glow-on-success" type="checkbox">
+            <span>Glow on successful sync</span>
+          </label>
+          <label class="check-row">
+            <input id="notify-on-failure" type="checkbox">
+            <span>Browser notification on failure</span>
+          </label>
+        </details>
+
+        <details data-section="data">
+          <summary>Data</summary>
+          <div class="section-message" data-message-for="data" role="status"></div>
+          <div class="button-row">
+            <button id="export-data" type="button">Export settings</button>
+            <label class="file-button">
+              Import settings
+              <input id="import-data" type="file" accept="application/json">
+            </label>
+            <button id="wipe-data" type="button" class="danger">Wipe all extension data</button>
+          </div>
+        </details>
+
+        <footer class="save-bar">
+          <button type="submit">Save settings</button>
+        </footer>
+      </form>
+    </main>
+    <script type="module" src="src/options.js"></script>
+  </body>
+</html>
