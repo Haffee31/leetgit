@@ -167,7 +167,10 @@ h1, h2, h3, p { margin: 0; }
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
+  opacity: 0;
+  transition: opacity 200ms ease;
 }
+.saved-badge.is-visible { opacity: 1; }
 
 /* ─── Setting Cards ─────────────────────────────────────────────── */
 .setting-card {

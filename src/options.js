@@ -106,9 +106,9 @@ async function save(section) {
 function showSavedBadge(section) {
   const badge = document.getElementById(`saved-${section}`);
   if (!badge) return;
-  badge.hidden = false;
+  badge.classList.add("is-visible");
   clearTimeout(badge._leetgitTimer);
-  badge._leetgitTimer = setTimeout(() => { badge.hidden = true; }, 2000);
+  badge._leetgitTimer = setTimeout(() => badge.classList.remove("is-visible"), 2500);
 }
 
 // ── Action buttons ─────────────────────────────────────────────────
