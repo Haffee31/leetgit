@@ -262,7 +262,7 @@
       <div class="leetgit-section-title">Recent syncs</div>
       <div class="leetgit-list">${rows || `<div class="leetgit-empty">No synced submissions yet.</div>`}</div>
       <div class="leetgit-actions">
-        ${settings?.commitMessageMode === "prompt" ? `<button class="leetgit-action" data-action="custom-message" type="button" ${pendingSubmission ? "" : "disabled"}>Custom commit message</button>` : ""}
+        ${settings?.commitMessageMode === "prompt" && pendingSubmission ? `<button class="leetgit-action" data-action="custom-message" type="button">Custom commit message</button>` : ""}
         ${lastFailure ? `<button class="leetgit-action" data-action="retry" type="button" ${currentState === "syncing" ? "disabled" : ""}>Retry last failed sync</button>` : ""}
       </div>
       ${commitMessageForm}
