@@ -438,21 +438,12 @@ async function readBranchSnapshotCold(config) {
 }
 
 async function fetchBranchSnapshot(branchName, config) {
-  try {
-    const branch = await github(`/repos/${config.repo.owner}/${config.repo.name}/branches/${encodeURIComponent(branchName)}`, { token: config.token });
-    const commitSha = branch.commit.sha;
-    const treeSha = branch.commit.commit.tree.sha;
-    const tree = await github(`/repos/${config.repo.owner}/${config.repo.name}/git/trees/${treeSha}?recursive=1`, { token: config.token });
-    return { commitSha, treeSha, tree };
-  } catch (branchError) {
-    if (branchError.status !== 404) throw branchError;
-    // 404 from the branches endpoint may mean an empty repo — fall back to the ref
-    // endpoint for accurate error classification (empty repos return 409 there).
-    const ref = await github(`/repos/${config.repo.owner}/${config.repo.name}/git/ref/heads/${encodeURIComponent(branchName)}`, { token: config.token });
-    const baseCommit = await github(`/repos/${config.repo.owner}/${config.repo.name}/git/commits/${ref.object.sha}`, { token: config.token });
-    const tree = await github(`/repos/${config.repo.owner}/${config.repo.name}/git/trees/${baseCommit.tree.sha}?recursive=1`, { token: config.token });
-    return { commitSha: ref.object.sha, treeSha: baseCommit.tree.sha, tree };
-  }
+  // Use the git-database ref endpoint — it works reliably with Contents-scoped
+  // fine-grained tokens and returns 409 for empty repos (handled by the caller).
+  const ref = await github(`/repos/${config.repo.owner}/${config.repo.name}/git/ref/heads/${encodeURIComponent(branchName)}`, { token: config.token });
+  const baseCommit = await github(`/repos/${config.repo.owner}/${config.repo.name}/git/commits/${ref.object.sha}`, { token: config.token });
+  const tree = await github(`/repos/${config.repo.owner}/${config.repo.name}/git/trees/${baseCommit.tree.sha}?recursive=1`, { token: config.token });
+  return { commitSha: ref.object.sha, treeSha: baseCommit.tree.sha, tree };
 }
 
 async function readBranchSnapshotHot(config, cached) {

@@ -122,6 +122,7 @@
     if (message?.type === "LEETGIT_SYNC_COMPLETE") {
       recentSyncs = message.recentSyncs || recentSyncs;
       lastFailure = null;
+      lastDiagnostic = "";
       setState("synced", `Synced ✓ ${message.title} (${message.language}, ${message.status})`);
       scheduleIdle();
       renderPanel();
@@ -129,6 +130,7 @@
     }
     if (message?.type === "LEETGIT_SYNC_SKIPPED") {
       recentSyncs = message.recentSyncs || recentSyncs;
+      lastDiagnostic = "";
       const skipTitle = message.reason === "duplicate"
         ? "LeetGit ready — commit skipped (same code & notes)"
         : message.reason === "paused"
@@ -141,6 +143,7 @@
     if (message?.type === "LEETGIT_SYNC_ERROR") {
       lastError = message.error || "Unknown error";
       lastFailure = message.failure || null;
+      lastDiagnostic = "";
       setState("error", "Sync failed - click for details");
       renderPanel();
     }
@@ -195,6 +198,7 @@
       if (panelOpen && root && !root.contains(event.target)) {
         panelOpen = false;
         panel.hidden = true;
+        lastDiagnostic = "";
       }
     });
   }
@@ -246,6 +250,8 @@
     panel.hidden = !panelOpen;
     if (panelOpen) {
       renderPanel();
+    } else {
+      lastDiagnostic = "";
     }
   }
 
