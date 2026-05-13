@@ -11,7 +11,6 @@ init();
 function init() {
   // Step 1
   document.getElementById("ob-next-1").addEventListener("click", () => goToStep(2));
-  document.getElementById("ob-skip-1").addEventListener("click", () => goToStep(2));
 
   // Step 2
   document.getElementById("ob-back-2").addEventListener("click", () => goToStep(1));
