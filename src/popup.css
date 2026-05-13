@@ -202,14 +202,14 @@ h2 {
 }
 
 .open-file {
-  border: 1px solid #cbd5e1;
-  border-radius: 999px;
-  background: #fff;
+  border: none;
+  background: transparent;
   color: #2563eb;
   cursor: pointer;
-  font-weight: 900;
-  width: 30px;
-  height: 30px;
+  font-size: 12px;
+  font-weight: 1000;
+  padding-right: 5px;
+  line-height: 1;
 }
 
 /* ── Footer ──────────────────────────────────────────────── */
