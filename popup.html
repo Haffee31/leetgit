@@ -8,23 +8,27 @@
   </head>
   <body>
     <main class="popup">
-      <header class="header">
-        <div>
-          <h1>LeetGit</h1>
-          <button id="repo-link" class="repo-link" type="button">Not connected</button>
+      <h1 class="popup-title">LeetGit</h1>
+
+      <div class="status-card">
+        <div class="status-repo-row">
+          <button id="repo-link" class="repo-name" type="button" disabled>Not configured</button>
+          <div class="status-connection">
+            <span id="status-dot" class="status-dot"></span>
+            <span id="connection-label" class="connection-label">Checking...</span>
+          </div>
         </div>
-        <span id="connection-pill" class="pill">Checking</span>
-      </header>
+        <div class="status-divider"></div>
+        <div class="status-sync-row">
+          <span class="sync-label">Sync</span>
+          <button id="pause-toggle" class="sync-toggle" type="button" aria-pressed="true">
+            <span class="sync-toggle-thumb"></span>
+          </button>
+          <span id="pause-toggle-label" class="sync-toggle-state">ON</span>
+        </div>
+      </div>
 
       <div id="token-warning" class="warning" hidden></div>
-
-      <div class="sync-toggle-row">
-        <span class="sync-toggle-label">Sync</span>
-        <button id="pause-toggle" class="sync-toggle" type="button" aria-pressed="true">
-          <span class="sync-toggle-thumb"></span>
-        </button>
-        <span id="pause-toggle-label" class="sync-toggle-state">ON</span>
-      </div>
 
       <section>
         <h2>Recent syncs</h2>

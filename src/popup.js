@@ -1,5 +1,6 @@
 const repoLink = document.getElementById("repo-link");
-const connectionPill = document.getElementById("connection-pill");
+const statusDot = document.getElementById("status-dot");
+const connectionLabel = document.getElementById("connection-label");
 const tokenWarning = document.getElementById("token-warning");
 const recentSyncs = document.getElementById("recent-syncs");
 const settingsButton = document.getElementById("settings");
@@ -23,9 +24,10 @@ async function init() {
       sendMessage({ type: "LEETGIT_GET_STATE" })
     ]);
     render();
-  } catch (error) {
-    connectionPill.textContent = "Setup needed";
-    connectionPill.classList.add("error");
+  } catch {
+    statusDot.className = "status-dot status-dot-error";
+    connectionLabel.textContent = "Setup needed";
+    connectionLabel.classList.add("connection-label-error");
     viewRepoButton.disabled = true;
   }
 }
@@ -41,9 +43,14 @@ async function togglePause() {
 
 function render() {
   const connected = Boolean(config.token && config.repo.owner && config.repo.name);
-  connectionPill.textContent = connected ? "Connected" : "Setup needed";
-  connectionPill.classList.toggle("error", !connected);
-  repoLink.textContent = connected ? `${config.repo.owner}/${config.repo.name}` : "Not connected";
+
+  repoLink.textContent = connected ? `${config.repo.owner}/${config.repo.name}` : "Not configured";
+  repoLink.disabled = !connected;
+
+  statusDot.className = `status-dot ${connected ? "status-dot-ok" : "status-dot-error"}`;
+  connectionLabel.textContent = connected ? "Connected to GitHub" : "Setup needed";
+  connectionLabel.classList.toggle("connection-label-error", !connected);
+
   viewRepoButton.disabled = !connected;
 
   renderTokenWarning();
@@ -57,7 +64,7 @@ function renderPauseToggle() {
   const paused = Boolean(config?.settings?.paused);
   pauseToggle.setAttribute("aria-pressed", String(!paused));
   pauseToggle.classList.toggle("sync-toggle-off", paused);
-  pauseToggleLabel.textContent = paused ? "Paused" : "ON";
+  pauseToggleLabel.textContent = paused ? "OFF" : "ON";
   pauseToggleLabel.classList.toggle("sync-toggle-state-paused", paused);
 }
 
