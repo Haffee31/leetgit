@@ -285,7 +285,7 @@
 
     panel.innerHTML = `
       <div class="leetgit-panel-head">
-        <strong>LeetGit</strong>
+        <span class="leetgit-brand"><span class="leetgit-brand-leet">Leet</span><span class="leetgit-brand-git">Git</span></span>
         <div class="leetgit-head-right">
           <button class="leetgit-sync-toggle${isPaused ? " leetgit-sync-toggle-off" : ""}" data-action="toggle-pause" type="button" aria-pressed="${!isPaused}" title="${isPaused ? "Resume syncing" : "Pause syncing"}">
             <span class="leetgit-sync-toggle-thumb"></span>
@@ -359,6 +359,7 @@
     const style = document.createElement("style");
     style.id = "leetgit-styles";
     style.textContent = `
+      /* ── Root & floating button ─────────────────────────── */
       #leetgit-root {
         display: inline-flex;
         align-items: center;
@@ -366,6 +367,8 @@
         z-index: 2147483647;
         margin-left: 10px;
         font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 13px;
+        color: #1f2328;
       }
       #leetgit-root.leetgit-fixed {
         position: fixed;
@@ -375,284 +378,256 @@
       }
       #leetgit-button {
         position: relative;
-        width: 34px;
-        height: 34px;
-        border: 1px solid rgba(148, 163, 184, 0.45);
+        width: 36px;
+        height: 36px;
+        border: 1px solid #d0d7de;
         border-radius: 999px;
         background: #ffffff;
-        color: #64748b;
+        color: #656d76;
         display: inline-grid;
         place-items: center;
         cursor: pointer;
-        box-shadow: 0 10px 25px rgba(15, 23, 42, 0.12);
-        transition: border-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+        box-shadow: 0 1px 3px rgba(31,35,40,0.06), 0 8px 24px rgba(31,35,40,0.1);
+        transition: border-color 160ms, color 160ms, box-shadow 160ms, transform 160ms;
       }
+      #leetgit-button:hover { transform: translateY(-1px); }
+
+      /* Connection dot */
       #leetgit-root[data-connected] #leetgit-button::before {
         content: "";
         position: absolute;
-        width: 9px;
-        height: 9px;
-        right: 1px;
-        bottom: 1px;
+        width: 9px; height: 9px;
+        right: 0; bottom: 0;
         border-radius: 999px;
-        background: #ef4444;
+        background: #cf222e;
         border: 2px solid #fff;
       }
-      #leetgit-root[data-connected="true"] #leetgit-button::before {
-        background: #22c55e;
-      }
-      #leetgit-button:hover {
-        transform: translateY(-1px);
-      }
+      #leetgit-root[data-connected="true"] #leetgit-button::before { background: #2db55d; }
+
+      /* Syncing */
       #leetgit-root[data-state="syncing"] #leetgit-button {
-        color: #2563eb;
-        border-color: #60a5fa;
+        color: #0969da;
+        border-color: #79b8ff;
         animation: leetgit-pulse 1.1s ease-in-out infinite;
       }
+      /* Synced */
       #leetgit-root[data-state="synced"] #leetgit-button {
-        color: #059669;
-        border-color: #34d399;
-        box-shadow: 0 0 0 5px rgba(52, 211, 153, 0.18), 0 10px 25px rgba(15, 23, 42, 0.12);
+        color: #1f883d;
+        border-color: #2db55d;
+        box-shadow: 0 0 0 4px rgba(45,181,93,0.18), 0 8px 24px rgba(31,35,40,0.1);
       }
+      /* Error */
       #leetgit-root[data-state="error"] #leetgit-button {
-        color: #dc2626;
+        color: #cf222e;
         border-color: #f87171;
       }
       #leetgit-root[data-state="error"] #leetgit-button::after {
         content: "";
         position: absolute;
-        width: 9px;
-        height: 9px;
-        right: 1px;
-        top: 1px;
+        width: 9px; height: 9px;
+        right: 0; top: 0;
         border-radius: 999px;
-        background: #dc2626;
+        background: #cf222e;
         border: 2px solid #fff;
       }
+      /* Paused */
+      #leetgit-root[data-paused="true"] #leetgit-button {
+        color: #92400e;
+        border-color: #fbbf24;
+      }
+      #leetgit-root[data-paused="true"] #leetgit-button::before { background: #f59e0b !important; }
+      #leetgit-root[data-paused="true"] #leetgit-button::after {
+        content: "⏸";
+        position: absolute; inset: 0;
+        display: grid; place-items: center;
+        background: rgba(254,243,199,0.9);
+        border-radius: 999px;
+        font-size: 11px; color: #92400e;
+        font-family: system-ui, sans-serif;
+      }
+
+      /* ── Panel ──────────────────────────────────────────── */
       #leetgit-panel {
         position: absolute;
-        right: 0;
-        top: 42px;
-        width: min(340px, calc(100vw - 28px));
-        color: #172033;
-        background: #fff;
-        border: 1px solid rgba(148, 163, 184, 0.28);
-        border-radius: 8px;
-        box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24);
-        padding: 12px;
+        right: 0; top: 44px;
+        width: min(348px, calc(100vw - 28px));
+        background: #ffffff;
+        border: 1px solid #d0d7de;
+        border-radius: 10px;
+        box-shadow: 0 1px 3px rgba(31,35,40,0.06), 0 16px 48px rgba(31,35,40,0.18);
+        padding: 14px;
+        color: #1f2328;
       }
-      .leetgit-fixed #leetgit-panel {
-        top: auto;
-        bottom: 42px;
-      }
-      .leetgit-panel-head,
-      .leetgit-row,
-      .leetgit-actions {
+      .leetgit-fixed #leetgit-panel { top: auto; bottom: 44px; }
+
+      /* ── Panel header ───────────────────────────────────── */
+      .leetgit-panel-head {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 10px;
+        gap: 8px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #eaecef;
+        margin-bottom: 12px;
+      }
+      .leetgit-brand {
+        font-size: 15px;
+        font-weight: 800;
+        letter-spacing: -0.3px;
+        line-height: 1;
+        user-select: none;
+      }
+      .leetgit-brand-leet { color: #ffa116; }
+      .leetgit-brand-git  { color: #24292f; }
+
+      .leetgit-head-right {
+        display: flex; align-items: center; gap: 6px;
       }
       .leetgit-pill {
         border-radius: 999px;
-        background: #eef2ff;
-        color: #3730a3;
+        background: #f6f8fa;
+        border: 1px solid #d0d7de;
+        color: #656d76;
         font-size: 11px;
-        padding: 3px 8px;
+        font-weight: 600;
+        padding: 2px 8px;
         white-space: nowrap;
       }
-      .leetgit-error {
-        margin-top: 10px;
-        padding: 8px;
-        border-radius: 6px;
-        background: #fef2f2;
-        color: #991b1b;
-        font-size: 12px;
-        line-height: 1.35;
-        overflow-wrap: anywhere;
-      }
-      .leetgit-diagnostic {
-        margin-top: 10px;
-        padding: 8px;
-        border-radius: 6px;
-        background: #eff6ff;
-        color: #1e3a8a;
-        font-size: 12px;
-        line-height: 1.35;
-        overflow-wrap: anywhere;
-      }
-      .leetgit-section-title {
-        margin-top: 12px;
-        margin-bottom: 6px;
-        font-size: 12px;
-        font-weight: 700;
-        color: #475569;
-      }
-      .leetgit-list {
-        display: grid;
-        gap: 6px;
-        max-height: 210px;
-        overflow-y: auto;
-      }
-      .leetgit-row {
-        padding: 8px;
-        border: 1px solid #e2e8f0;
-        border-radius: 6px;
-      }
-      .leetgit-title {
-        font-size: 13px;
-        font-weight: 700;
-        color: #0f172a;
-      }
-      .leetgit-problem-link {
-        color: inherit;
-        text-decoration: none;
-      }
-      .leetgit-problem-link:hover {
-        color: #2563eb;
-        text-decoration: underline;
-      }
-      .leetgit-meta,
-      .leetgit-empty {
-        margin-top: 2px;
-        font-size: 12px;
-        color: #64748b;
-      }
-      .leetgit-link {
-        color: #2563eb;
-        text-decoration: none;
-        font-size: 16px;
-      }
-      .leetgit-badge {
-        display: inline-block;
-        border-radius: 999px;
-        background: #fff7ed;
-        color: #9a3412;
-        font-size: 10px;
-        font-weight: 800;
-        padding: 1px 6px;
-        vertical-align: middle;
-      }
-      .leetgit-actions {
-        margin-top: 12px;
-        align-items: stretch;
-      }
-      .leetgit-action {
-        flex: 1;
-        border: 1px solid #cbd5e1;
-        border-radius: 6px;
-        background: #f8fafc;
-        color: #0f172a;
-        padding: 7px 8px;
-        font-size: 12px;
-        cursor: pointer;
-      }
-      .leetgit-action:disabled {
-        cursor: not-allowed;
-        opacity: 0.55;
-      }
-      .leetgit-options {
-        display: inline-block;
-        margin-top: 10px;
-        border: 0;
-        background: transparent;
-        color: #2563eb;
-        cursor: pointer;
-        font-size: 12px;
-        font: inherit;
-        padding: 0;
-        text-decoration: none;
-      }
-      .leetgit-head-right {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-      }
+
+      /* ── Sync toggle ────────────────────────────────────── */
       .leetgit-sync-toggle {
-        position: relative;
-        width: 30px;
-        height: 17px;
-        border-radius: 999px;
-        border: none;
-        background: #22c55e;
-        cursor: pointer;
-        padding: 0;
-        flex-shrink: 0;
-        transition: background 160ms;
+        position: relative; width: 30px; height: 17px;
+        border-radius: 999px; border: none;
+        background: #2db55d; cursor: pointer; padding: 0;
+        flex-shrink: 0; transition: background 160ms;
       }
-      .leetgit-sync-toggle.leetgit-sync-toggle-off {
-        background: #cbd5e1;
-      }
+      .leetgit-sync-toggle.leetgit-sync-toggle-off { background: #cbd5e1; }
       .leetgit-sync-toggle-thumb {
-        position: absolute;
-        top: 2.5px;
-        left: 2.5px;
-        width: 12px;
-        height: 12px;
-        border-radius: 999px;
-        background: #fff;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        position: absolute; top: 2.5px; left: 2.5px;
+        width: 12px; height: 12px; border-radius: 999px;
+        background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.2);
         transition: transform 160ms;
       }
       .leetgit-sync-toggle:not(.leetgit-sync-toggle-off) .leetgit-sync-toggle-thumb {
         transform: translateX(13px);
       }
       .leetgit-sync-toggle-label {
-        font-size: 11px;
-        font-weight: 700;
-        color: #047857;
-        min-width: 18px;
+        font-size: 11px; font-weight: 700; color: #1f883d; min-width: 18px;
       }
-      .leetgit-sync-toggle-label-off {
-        color: #94a3b8;
-      }
+      .leetgit-sync-toggle-label-off { color: #94a3b8; }
+
+      /* ── Status messages ────────────────────────────────── */
       .leetgit-paused-notice {
-        margin-top: 8px;
-        padding: 7px 9px;
+        margin-bottom: 10px; padding: 8px 10px; border-radius: 6px;
+        background: #fff7ed; color: #92400e;
+        font-size: 12px; line-height: 1.4;
+        border: 1px solid #fed7aa;
+      }
+      .leetgit-error {
+        margin-bottom: 10px; padding: 8px 10px; border-radius: 6px;
+        background: #fff5f5; color: #cf222e;
+        font-size: 12px; line-height: 1.4; overflow-wrap: anywhere;
+        border: 1px solid #fca5a5;
+      }
+      .leetgit-diagnostic {
+        margin-bottom: 10px; padding: 8px 10px; border-radius: 6px;
+        background: #f6f8fa; color: #656d76;
+        font-size: 12px; line-height: 1.4; overflow-wrap: anywhere;
+        border: 1px solid #d0d7de;
+      }
+
+      /* ── Recent syncs ───────────────────────────────────── */
+      .leetgit-section-title {
+        font-size: 11px; font-weight: 700;
+        color: #656d76; letter-spacing: 0.04em; text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+      .leetgit-list {
+        display: grid; gap: 6px;
+        max-height: 220px; overflow-y: auto;
+      }
+      .leetgit-row {
+        display: flex; align-items: center;
+        justify-content: space-between; gap: 8px;
+        padding: 9px 10px;
+        border: 1px solid #d0d7de;
         border-radius: 6px;
-        background: #fef9c3;
-        color: #854d0e;
-        font-size: 12px;
-        line-height: 1.35;
+        background: #ffffff;
       }
-      #leetgit-root[data-paused="true"] #leetgit-button {
-        color: #92400e;
-        border-color: #fbbf24;
+      .leetgit-title {
+        font-size: 12.5px; font-weight: 700; color: #1f2328;
       }
-      #leetgit-root[data-paused="true"] #leetgit-button::before {
-        background: #f59e0b !important;
+      .leetgit-problem-link {
+        color: inherit; text-decoration: none;
+        transition: color 120ms;
       }
-      #leetgit-root[data-paused="true"] #leetgit-button::after {
-        content: "⏸";
-        position: absolute;
-        inset: 0;
-        display: grid;
-        place-items: center;
-        background: rgba(254, 243, 199, 0.88);
-        border-radius: 999px;
-        font-size: 11px;
-        color: #92400e;
-        font-family: system-ui, sans-serif;
+      .leetgit-problem-link:hover { color: #0969da; text-decoration: underline; }
+      .leetgit-meta, .leetgit-empty {
+        margin-top: 2px; font-size: 11.5px; color: #656d76;
       }
-      .leetgit-commit-message {
+      .leetgit-link {
+        color: #0969da; text-decoration: none;
+        font-size: 12px; font-weight: 700; flex-shrink: 0;
+        transition: opacity 120ms;
+      }
+      .leetgit-link:hover { opacity: 0.7; }
+      .leetgit-badge {
+        display: inline-block; border-radius: 999px;
+        background: #fff7ed; color: #92400e; border: 1px solid #fed7aa;
+        font-size: 10px; font-weight: 700;
+        padding: 1px 6px; vertical-align: middle;
+      }
+
+      /* ── Action buttons ─────────────────────────────────── */
+      .leetgit-actions {
+        display: flex; align-items: stretch;
+        justify-content: space-between; gap: 8px;
+        margin-top: 12px;
+      }
+      .leetgit-action {
+        flex: 1;
+        border: 1px solid #d0d7de;
+        border-radius: 6px;
+        background: #f6f8fa;
+        color: #1f2328;
+        padding: 7px 8px;
+        font-size: 12px; font-weight: 600;
+        cursor: pointer; font: inherit; font-size: 12px;
+        transition: background 120ms, border-color 120ms;
+      }
+      .leetgit-action:hover { background: #eaecef; border-color: #adb5bf; }
+      .leetgit-action:disabled { cursor: not-allowed; opacity: 0.5; }
+
+      .leetgit-options {
+        display: inline-block;
         margin-top: 10px;
+        border: none; background: transparent;
+        color: #656d76; cursor: pointer;
+        font: inherit; font-size: 12px; padding: 0;
+        text-decoration: none; transition: color 120ms;
       }
+      .leetgit-options:hover { color: #1f2328; }
+
+      /* ── Commit message form ────────────────────────────── */
+      .leetgit-commit-message { margin-top: 12px; }
       .leetgit-commit-input {
-        width: 100%;
-        box-sizing: border-box;
+        width: 100%; box-sizing: border-box;
         resize: vertical;
-        border: 1px solid #cbd5e1;
-        border-radius: 6px;
-        padding: 8px;
-        color: #0f172a;
-        background: #fff;
-        font: inherit;
-        font-size: 12px;
-        line-height: 1.4;
+        border: 1px solid #d0d7de; border-radius: 6px;
+        padding: 8px 10px;
+        color: #1f2328; background: #ffffff;
+        font: inherit; font-size: 12.5px; line-height: 1.4;
+        transition: border-color 150ms, box-shadow 150ms;
       }
+      .leetgit-commit-input:focus {
+        outline: none; border-color: #0969da;
+        box-shadow: 0 0 0 3px rgba(9,105,218,0.18);
+      }
+
+      /* ── Animation ──────────────────────────────────────── */
       @keyframes leetgit-pulse {
-        0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.22), 0 10px 25px rgba(15, 23, 42, 0.12); }
-        50% { box-shadow: 0 0 0 6px rgba(37, 99, 235, 0), 0 10px 25px rgba(15, 23, 42, 0.12); }
+        0%, 100% { box-shadow: 0 0 0 0 rgba(9,105,218,0.22), 0 8px 24px rgba(31,35,40,0.1); }
+        50%       { box-shadow: 0 0 0 6px rgba(9,105,218,0), 0 8px 24px rgba(31,35,40,0.1); }
       }
     `;
     document.documentElement.appendChild(style);

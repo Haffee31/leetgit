@@ -15,6 +15,10 @@ init();
 
 async function init() {
   settingsButton.addEventListener("click", () => sendMessage({ type: "LEETGIT_OPEN_SETTINGS" }));
+  document.getElementById("open-settings-link")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    sendMessage({ type: "LEETGIT_OPEN_SETTINGS" });
+  });
   viewRepoButton.addEventListener("click", openRepo);
   repoLink.addEventListener("click", openRepo);
   pauseToggle.addEventListener("click", togglePause);
