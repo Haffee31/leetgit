@@ -1,8 +1,3 @@
-let CONFIG = {};
-try {
-  ({ CONFIG } = await import("./config.js"));
-} catch { /* production — config.js not present */ }
-
 export const DEFAULT_SETTINGS = {
   syncStatuses: ["Accepted"],
   skipDuplicates: true,
@@ -14,17 +9,17 @@ export const DEFAULT_SETTINGS = {
 };
 
 export const DEFAULT_REPO = {
-  owner: CONFIG.owner || "",
-  name: CONFIG.repo || "",
-  branch: CONFIG.branch || "main",
-  subfolder: CONFIG.subfolder || ""
+  owner: "",
+  name: "",
+  branch: "main",
+  subfolder: ""
 };
 
 export async function getStoredConfig() {
   const stored = await chrome.storage.local.get(["settings", "token", "repo", "tokenMeta"]);
   return {
-    settings: { ...DEFAULT_SETTINGS, ...CONFIG, ...(stored.settings || {}) },
-    token: stored.token || CONFIG.githubToken || "",
+    settings: { ...DEFAULT_SETTINGS, ...(stored.settings || {}) },
+    token: stored.token || "",
     repo: { ...DEFAULT_REPO, ...(stored.repo || {}) },
     tokenMeta: stored.tokenMeta || null
   };

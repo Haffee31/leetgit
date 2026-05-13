@@ -1,7 +1,3 @@
-let CONFIG = {};
-try {
-  ({ CONFIG } = await import("./config.js"));
-} catch { /* production — config.js not present */ }
 import {
   exportExtensionData,
   getStoredConfig,
@@ -564,7 +560,7 @@ async function github(path, options = {}) {
     method: options.method || "GET",
     headers: {
       accept: "application/vnd.github+json",
-      authorization: `Bearer ${options.token || CONFIG.githubToken}`,
+      authorization: `Bearer ${options.token}`,
       "content-type": "application/json",
       "x-github-api-version": "2022-11-28"
     },

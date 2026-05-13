@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LeetGit",
-  "version": "0.1.0",
-  "description": "Automatically sync LeetCode submissions to GitHub.",
+  "version": "1.0.0",
+  "description": "Automatically sync LeetCode submissions to GitHub. One solve, one commit — build your coding portfolio effortlessly.",
   "permissions": ["storage", "notifications"],
   "host_permissions": [
     "https://leetcode.com/*",
