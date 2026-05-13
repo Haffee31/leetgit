@@ -634,13 +634,17 @@
   }
 
   function iconSvg() {
+    // Exact replica of icons/icon.svg scaled to fit the circular button.
+    // Includes the white rounded-square background so it matches the toolbar icon.
     return `
-      <svg width="20" height="20" viewBox="0 0 128 128" fill="none"
+      <svg width="24" height="24" viewBox="0 0 128 128"
            xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <rect x="14" y="24" width="16" height="70" rx="4" fill="#ffa116"/>
-        <rect x="14" y="79" width="46" height="16" rx="4" fill="#ffa116"/>
-        <path d="M 113 50 A 22 22 0 1 0 118 64 L 96 64"
-              stroke="#24292f" stroke-width="15"
+        <rect width="128" height="128" rx="22" fill="#ffffff"/>
+        <rect width="128" height="128" rx="22" fill="none" stroke="#e2e8f0" stroke-width="2"/>
+        <rect x="12" y="32" width="14" height="64" rx="3" fill="#ffa116"/>
+        <rect x="12" y="82" width="44" height="14" rx="3" fill="#ffa116"/>
+        <path d="M 111 45 A 25 25 0 1 0 120 64 L 95 64"
+              fill="none" stroke="#24292f" stroke-width="14"
               stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     `;
