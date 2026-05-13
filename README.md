@@ -35,9 +35,64 @@ No copy-paste, no manual uploads. Solve a problem, get a commit. Your entire Lee
 
 ## Screenshots
 
-> _Screenshots coming soon. Below are the planned visuals._
+### Popup & floating panel
 
-<!-- TODO: replace placeholders with real screenshots -->
+<p align="center">
+  <img src="src/assets/popup.png" alt="Extension popup showing recent syncs, connection status, and sync toggle" width="300"/>
+  &nbsp;&nbsp;&nbsp;
+  <img src="src/assets/floating-modal.png" alt="Floating sync panel on LeetCode" width="300"/>
+</p>
+<p align="center">
+  <em>Extension popup (left) &nbsp;·&nbsp; Floating panel on LeetCode (right)</em>
+</p>
+
+---
+
+### Setup guide
+
+<p align="center">
+  <img src="src/assets/setup-guide-step-1.png" alt="Setup step 1 — Pick a repository" width="680"/>
+  <br/><em>Step 1 — Pick a repository</em>
+</p>
+
+<p align="center">
+  <img src="src/assets/setup-guide-step-2.png" alt="Setup step 2 — Generate an access token" width="680"/>
+  <br/><em>Step 2 — Generate a GitHub access token</em>
+</p>
+
+<p align="center">
+  <img src="src/assets/setup-guide-step-3.png" alt="Setup step 3 — Connect LeetGit" width="680"/>
+  <br/><em>Step 3 — Connect LeetGit</em>
+</p>
+
+---
+
+### Settings
+
+<p align="center">
+  <img src="src/assets/options-1.png" alt="Settings — Repository" width="720"/>
+  <br/><em>Repository — GitHub token, repo, branch, and subfolder</em>
+</p>
+
+<p align="center">
+  <img src="src/assets/options-2.png" alt="Settings — Sync" width="720"/>
+  <br/><em>Sync — Choose which outcomes trigger a commit and how duplicates are handled</em>
+</p>
+
+<p align="center">
+  <img src="src/assets/options-3.png" alt="Settings — Format" width="720"/>
+  <br/><em>Format — Commit message template or per-submission prompts</em>
+</p>
+
+<p align="center">
+  <img src="src/assets/options-4.png" alt="Settings — Notifications" width="720"/>
+  <br/><em>Notifications — Glow on success, browser notification on failure</em>
+</p>
+
+<p align="center">
+  <img src="src/assets/options-5.png" alt="Settings — Data" width="720"/>
+  <br/><em>Data — Export, import, or wipe all extension data</em>
+</p>
 <!--
 <p align="center">
   <img src="docs/screenshot-panel.png" alt="Floating sync panel on LeetCode" width="360"/>
