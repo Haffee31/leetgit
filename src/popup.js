@@ -100,7 +100,7 @@ function renderSyncRow(sync) {
     <div class="sync-row">
       <div>
         ${titleHtml}
-        <div class="sync-meta">${escapeHtml(sync.language)} · ${sync.status === "Accepted" ? "✅" : "❌"} ${escapeHtml(sync.status)} · ${relativeTime(sync.submittedAt)}</div>
+        <div class="sync-meta">${escapeHtml(sync.language)} · ${sync.status === "Accepted" ? "✅" : "❌"} ${escapeHtml(sync.status)} · ${relativeTime(sync.submittedAt)}${sync.duplicate ? ` · <span class="sync-badge" title="Same code and notes as last commit">Commit skipped</span>` : ""}</div>
       </div>
       ${sync.githubUrl ? `<button class="open-file" data-url="${escapeAttribute(sync.githubUrl)}" type="button">↗</button>` : ""}
     </div>
