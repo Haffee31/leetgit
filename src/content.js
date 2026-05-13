@@ -635,11 +635,13 @@
 
   function iconSvg() {
     return `
-      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M6 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        <path d="M18 9a6 6 0 0 1-6 6H6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        <path d="M14 5l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <circle cx="6" cy="18" r="3" stroke="currentColor" stroke-width="2"/>
+      <svg width="20" height="20" viewBox="0 0 128 128" fill="none"
+           xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="14" y="24" width="16" height="70" rx="4" fill="#ffa116"/>
+        <rect x="14" y="79" width="46" height="16" rx="4" fill="#ffa116"/>
+        <path d="M 113 50 A 22 22 0 1 0 118 64 L 96 64"
+              stroke="#24292f" stroke-width="15"
+              stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     `;
   }
