@@ -7,112 +7,255 @@
     <link rel="stylesheet" href="src/settings-page.css">
   </head>
   <body>
-    <main class="shell">
-      <header class="page-head">
-        <div>
-          <h1>LeetGit Settings</h1>
-          <p>Connect GitHub, choose what to sync, and tune the markdown output.</p>
-        </div>
-        <div class="header-actions">
-          <a class="ghost-link" href="onboarding.html">Setup guide</a>
-          <a class="ghost-link" href="https://leetcode.com/problemset/" target="_blank" rel="noreferrer">Open LeetCode</a>
-        </div>
-      </header>
 
-      <form id="settings-form" class="stack">
-        <details open data-section="repository">
-          <summary>Repository</summary>
+    <!-- ── Header ─────────────────────────────────────────────── -->
+    <header class="page-header">
+      <a class="brand" href="#"><span class="brand-leet">Leet</span><span class="brand-git">Git</span></a>
+      <div class="header-links">
+        <a class="header-link" href="onboarding.html">Setup guide</a>
+        <a class="header-link" href="https://leetcode.com/problemset/" target="_blank" rel="noreferrer">LeetCode ↗</a>
+      </div>
+    </header>
+
+    <!-- ── Body ───────────────────────────────────────────────── -->
+    <div class="settings-body">
+
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <nav class="sidebar-nav">
+
+          <button class="nav-item is-active" data-section="repository" type="button">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/>
+              <path d="M9 18c-4.51 2-5-2-7-2"/>
+            </svg>
+            Repository
+          </button>
+
+          <button class="nav-item" data-section="sync" type="button">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="23 4 23 10 17 10"/>
+              <polyline points="1 20 1 14 7 14"/>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
+            Sync
+          </button>
+
+          <button class="nav-item" data-section="format" type="button">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+            Format
+          </button>
+
+          <button class="nav-item" data-section="notifications" type="button">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            Notifications
+          </button>
+
+          <button class="nav-item" data-section="data" type="button">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <ellipse cx="12" cy="5" rx="9" ry="3"/>
+              <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+              <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+            </svg>
+            Data
+          </button>
+
+        </nav>
+      </aside>
+
+      <!-- Content -->
+      <main class="settings-content">
+
+        <!-- ── Repository ──────────────────────────────────────── -->
+        <div class="section-pane is-active" id="pane-repository">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title">Repository</h2>
+              <p class="section-desc">Connect a GitHub repository where your LeetCode submissions will be committed as Markdown files.</p>
+            </div>
+            <span id="saved-repository" class="saved-badge" hidden>✓ Saved</span>
+          </div>
+
           <div class="section-message" data-message-for="repository" role="status"></div>
-          <div class="section-grid">
-            <label class="field field-wide">
-              <span>Personal access token</span>
+
+          <div class="setting-card">
+            <p class="card-title">GitHub access token</p>
+            <div class="field">
+              <label class="field-label" for="token">Personal access token</label>
               <div class="token-row">
-                <input id="token" type="password" autocomplete="off" placeholder="github_pat_...">
-                <button id="toggle-token" type="button" class="small-button">Show</button>
+                <input id="token" class="mono" type="password" autocomplete="off" placeholder="github_pat_...">
+                <button id="toggle-token" class="btn btn-sm" type="button">Show</button>
               </div>
-            </label>
-            <label class="field">
-              <span>Connected repo</span>
-              <select id="repo-select">
-                <option value="">Load repos from token</option>
-              </select>
-            </label>
-            <label class="field">
-              <span>Branch</span>
-              <input id="branch" type="text" placeholder="main">
-            </label>
-            <label class="field">
-              <span>Subfolder</span>
-              <input id="subfolder" type="text" placeholder="optional/path">
-            </label>
-            <div class="button-row field-wide">
-              <button id="load-repos" type="button">Load repos</button>
-              <button id="test-connection" type="button">Test connection</button>
+              <p class="field-hint">Create a fine-grained token with <strong>Contents</strong> read &amp; write access scoped to your target repo. Changes are saved when you leave this field.</p>
             </div>
           </div>
-        </details>
 
-        <details open data-section="sync">
-          <summary>What to sync</summary>
+          <div class="setting-card">
+            <p class="card-title">Repository &amp; branch</p>
+            <div class="field-grid">
+              <div class="field">
+                <label class="field-label" for="repo-select">Connected repo</label>
+                <select id="repo-select">
+                  <option value="">Load repos from token</option>
+                </select>
+              </div>
+              <div class="field">
+                <label class="field-label" for="branch">Branch</label>
+                <input id="branch" type="text" placeholder="main">
+              </div>
+              <div class="field">
+                <label class="field-label" for="subfolder">Subfolder <span style="font-weight:400;color:var(--text-muted)">(optional)</span></label>
+                <input id="subfolder" type="text" placeholder="e.g. solutions">
+                <p class="field-hint">Nest all solution files inside this subfolder. Leave empty to commit to the repo root.</p>
+              </div>
+            </div>
+            <div class="btn-row" style="margin-top:16px">
+              <button id="load-repos" class="btn" type="button">Load repos</button>
+              <button id="test-connection" class="btn btn-primary" type="button">Test connection</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Sync ───────────────────────────────────────────── -->
+        <div class="section-pane" id="pane-sync">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title">Sync</h2>
+              <p class="section-desc">Choose which submission outcomes trigger a commit, and how duplicate submissions are handled.</p>
+            </div>
+            <span id="saved-sync" class="saved-badge" hidden>✓ Saved</span>
+          </div>
+
           <div class="section-message" data-message-for="sync" role="status"></div>
-          <div class="check-grid" id="status-checks"></div>
-          <label class="check-row">
-            <input id="skip-duplicates" type="checkbox">
-            <span>Skip duplicate submissions</span>
-          </label>
-        </details>
 
-        <details data-section="format">
-          <summary>Commit format</summary>
+          <div class="setting-card">
+            <p class="card-title">Submission outcomes to sync</p>
+            <p class="field-hint" style="margin-bottom:14px">Only submissions with a checked outcome will be committed to GitHub.</p>
+            <div class="check-grid" id="status-checks"></div>
+          </div>
+
+          <div class="setting-card">
+            <p class="card-title">Duplicate handling</p>
+            <label class="check-row">
+              <input id="skip-duplicates" type="checkbox">
+              <span>
+                Skip duplicate submissions
+                <span class="check-sub">If the code and notes are identical to the last commit for this problem, no new commit is created.</span>
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <!-- ── Format ─────────────────────────────────────────── -->
+        <div class="section-pane" id="pane-format">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title">Format</h2>
+              <p class="section-desc">Customize commit messages and the Markdown layout for each synced submission.</p>
+            </div>
+            <span id="saved-format" class="saved-badge" hidden>✓ Saved</span>
+          </div>
+
           <div class="section-message" data-message-for="format" role="status"></div>
-          <div class="radio-stack">
-            <label class="check-row">
-              <input type="radio" name="commit-mode" value="template">
-              <span>Use commit message template automatically</span>
-            </label>
-            <label class="check-row">
-              <input type="radio" name="commit-mode" value="prompt">
-              <span>Ask me for a commit message every time</span>
-            </label>
-          </div>
-          <label class="field field-wide">
-            <span>Commit message template</span>
-            <input id="commit-template" type="text">
-          </label>
-          <p class="hint">Available variables: {number}, {title}, {language}, {status}, {difficulty}</p>
-        </details>
 
-        <details data-section="notifications">
-          <summary>Notifications</summary>
+          <div class="setting-card">
+            <p class="card-title">Commit message</p>
+            <div class="radio-stack" style="margin-bottom:18px">
+              <label class="check-row">
+                <input type="radio" name="commit-mode" value="template">
+                <span>
+                  Use template automatically
+                  <span class="check-sub">Every submission is committed using the template below — no prompts.</span>
+                </span>
+              </label>
+              <label class="check-row">
+                <input type="radio" name="commit-mode" value="prompt">
+                <span>
+                  Ask me every time
+                  <span class="check-sub">A text box appears in the LeetCode panel for you to write a custom message before syncing.</span>
+                </span>
+              </label>
+            </div>
+            <div class="field">
+              <label class="field-label" for="commit-template">Commit message template</label>
+              <input id="commit-template" type="text" placeholder="Solve {number}. {title} ({language})">
+              <p class="field-hint">Available variables: <code>{number}</code> <code>{title}</code> <code>{language}</code> <code>{status}</code> <code>{difficulty}</code></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Notifications ──────────────────────────────────── -->
+        <div class="section-pane" id="pane-notifications">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title">Notifications</h2>
+              <p class="section-desc">Configure visual and browser notifications for sync events.</p>
+            </div>
+            <span id="saved-notifications" class="saved-badge" hidden>✓ Saved</span>
+          </div>
+
           <div class="section-message" data-message-for="notifications" role="status"></div>
-          <label class="check-row">
-            <input id="glow-on-success" type="checkbox">
-            <span>Glow on successful sync</span>
-          </label>
-          <label class="check-row">
-            <input id="notify-on-failure" type="checkbox">
-            <span>Browser notification on failure</span>
-          </label>
-        </details>
 
-        <details data-section="data">
-          <summary>Data</summary>
-          <div class="section-message" data-message-for="data" role="status"></div>
-          <div class="button-row">
-            <button id="export-data" type="button">Export settings</button>
-            <label class="file-button">
-              Import settings
-              <input id="import-data" type="file" accept="application/json">
-            </label>
-            <button id="wipe-data" type="button" class="danger">Wipe all extension data</button>
+          <div class="setting-card">
+            <div class="radio-stack">
+              <label class="check-row">
+                <input id="glow-on-success" type="checkbox">
+                <span>
+                  Glow on successful sync
+                  <span class="check-sub">The LeetGit button pulses green briefly after a commit lands.</span>
+                </span>
+              </label>
+              <label class="check-row">
+                <input id="notify-on-failure" type="checkbox">
+                <span>
+                  Browser notification on failure
+                  <span class="check-sub">Shows a system notification if a sync fails so nothing is silently lost.</span>
+                </span>
+              </label>
+            </div>
           </div>
-        </details>
+        </div>
 
-        <footer class="save-bar">
-          <button type="submit">Save settings</button>
-        </footer>
-      </form>
-    </main>
+        <!-- ── Data ───────────────────────────────────────────── -->
+        <div class="section-pane" id="pane-data">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title">Data</h2>
+              <p class="section-desc">Export your LeetGit configuration, restore from a backup, or reset all extension data.</p>
+            </div>
+            <span id="saved-data" class="saved-badge" hidden>✓ Saved</span>
+          </div>
+
+          <div class="section-message" data-message-for="data" role="status"></div>
+
+          <div class="setting-card">
+            <p class="card-title">Backup &amp; restore</p>
+            <p class="field-hint" style="margin-bottom:14px">Export saves your token, repo, and all settings to a JSON file. Import restores from a previously exported file.</p>
+            <div class="btn-row">
+              <button id="export-data" class="btn" type="button">Export settings</button>
+              <label class="file-btn">
+                Import settings
+                <input id="import-data" type="file" accept="application/json">
+              </label>
+            </div>
+          </div>
+
+          <div class="setting-card" style="border-color:#fca5a5">
+            <p class="card-title" style="color:var(--danger)">Danger zone</p>
+            <p class="field-hint" style="margin-bottom:14px">Wipe all LeetGit data stored in this browser. This cannot be undone — your GitHub token and settings will be cleared.</p>
+            <button id="wipe-data" class="btn btn-danger" type="button">Wipe all extension data</button>
+          </div>
+        </div>
+
+      </main>
+    </div>
+
     <script type="module" src="src/options.js"></script>
   </body>
 </html>

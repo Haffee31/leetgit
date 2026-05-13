@@ -7,52 +7,142 @@
     <link rel="stylesheet" href="src/settings-page.css">
   </head>
   <body>
-    <main class="shell narrow">
-      <header class="page-head">
-        <div>
-          <h1>Set up LeetGit</h1>
-          <p>Connect a GitHub repository, then solve a problem to test the sync.</p>
+    <div class="onboarding-shell">
+
+      <!-- ── Header ──────────────────────────────────────────── -->
+      <div class="ob-header">
+        <a class="brand" href="#"><span class="brand-leet">Leet</span><span class="brand-git">Git</span></a>
+        <a class="ob-nav-link" href="options.html">Settings →</a>
+      </div>
+
+      <!-- ── Progress track ──────────────────────────────────── -->
+      <div class="progress-track">
+        <div class="progress-step active" data-step="1">
+          <div class="dot-circle">1</div>
+          <span class="dot-label">Repository</span>
         </div>
-        <a class="ghost-link" href="options.html">Settings</a>
-      </header>
+        <div class="progress-connector" data-after="1"></div>
+        <div class="progress-step" data-step="2">
+          <div class="dot-circle">2</div>
+          <span class="dot-label">Token</span>
+        </div>
+        <div class="progress-connector" data-after="2"></div>
+        <div class="progress-step" data-step="3">
+          <div class="dot-circle">3</div>
+          <span class="dot-label">Connect</span>
+        </div>
+      </div>
 
-      <section class="setup-panel">
-        <h2>Recommended setup path</h2>
-        <p>Keep this guide open while you configure Settings in another tab. You can return here anytime from the Settings page.</p>
-      </section>
+      <!-- ── Step card ────────────────────────────────────────── -->
+      <div class="step-card">
 
-      <section class="onboarding-step">
-        <div class="step-number">1</div>
-        <div>
-          <h2>Pick a repo</h2>
-          <p>Use an existing repo, or create a clean one named <code>leetcode-solutions</code>.</p>
-          <div class="button-row">
-            <a class="button-link" href="https://github.com/new?name=leetcode-solutions" target="_blank" rel="noreferrer">Create new repo</a>
-            <a class="button-link secondary" href="options.html" target="_blank" rel="noreferrer">Use existing repo</a>
+        <!-- Step 1: Repository -->
+        <div class="ob-step is-active" data-step="1">
+          <p class="step-eyebrow">Step 1 of 3</p>
+          <h2 class="step-title">Pick a repository</h2>
+          <p class="step-body">
+            Choose where your LeetCode submissions will be committed. You can use an existing GitHub repository or create a clean one — we recommend naming it <code>leetcode-solutions</code>.
+          </p>
+          <div class="btn-row">
+            <a class="btn btn-primary" href="https://github.com/new?name=leetcode-solutions" target="_blank" rel="noreferrer">
+              Create new repo ↗
+            </a>
+            <a class="btn" href="https://github.com" target="_blank" rel="noreferrer">
+              Browse existing repos ↗
+            </a>
+          </div>
+          <div class="step-action-row">
+            <span></span>
+            <div class="btn-row">
+              <button class="btn" id="ob-skip-1" type="button">Skip</button>
+              <button class="btn btn-orange" id="ob-next-1" type="button">Next →</button>
+            </div>
           </div>
         </div>
-      </section>
 
-      <section class="onboarding-step">
-        <div class="step-number">2</div>
-        <div>
-          <h2>Generate a token</h2>
-          <p>Create a fine-grained GitHub token scoped to one repo with Contents read/write access.</p>
-          <a class="button-link" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">Open GitHub token page</a>
-        </div>
-      </section>
-
-      <section class="onboarding-step">
-        <div class="step-number">3</div>
-        <div>
-          <h2>Paste and connect</h2>
-          <p>Open settings, paste the token, load repos, choose the repo and branch, then save.</p>
-          <div class="button-row">
-            <a class="button-link" href="options.html" target="_blank" rel="noreferrer">Open settings</a>
-            <a class="button-link secondary" href="https://leetcode.com/problemset/" target="_blank" rel="noreferrer">Solve a problem</a>
+        <!-- Step 2: Token -->
+        <div class="ob-step" data-step="2">
+          <p class="step-eyebrow">Step 2 of 3</p>
+          <h2 class="step-title">Generate an access token</h2>
+          <p class="step-body">
+            LeetGit needs a GitHub personal access token to commit files on your behalf. Create a <strong>fine-grained token</strong> scoped to your target repo with <strong>Contents</strong> read &amp; write permission. Copy it — you'll paste it in the next step.
+          </p>
+          <div class="btn-row">
+            <a class="btn btn-primary" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">
+              Open GitHub token page ↗
+            </a>
+          </div>
+          <div class="step-action-row">
+            <button class="btn" id="ob-back-2" type="button">← Back</button>
+            <button class="btn btn-orange" id="ob-next-2" type="button">Next →</button>
           </div>
         </div>
-      </section>
-    </main>
+
+        <!-- Step 3: Connect -->
+        <div class="ob-step" data-step="3">
+          <p class="step-eyebrow">Step 3 of 3</p>
+          <h2 class="step-title">Connect LeetGit</h2>
+          <p class="step-body">
+            Paste your token below, load your repositories, then choose the one you want to sync to.
+          </p>
+
+          <div id="ob-status" class="step-status"></div>
+
+          <!-- Token -->
+          <div class="field" style="margin-bottom:14px">
+            <label class="field-label" for="ob-token">Personal access token</label>
+            <div class="token-row">
+              <input id="ob-token" class="mono" type="password" autocomplete="off" placeholder="github_pat_...">
+              <button id="ob-toggle-token" class="btn btn-sm" type="button">Show</button>
+            </div>
+          </div>
+
+          <button id="ob-load-repos" class="btn" type="button">Load repos</button>
+
+          <!-- Repo + branch (shown after loading) -->
+          <div class="ob-form-section" id="ob-repo-section" hidden>
+            <div class="field">
+              <label class="field-label" for="ob-repo">Repository</label>
+              <select id="ob-repo">
+                <option value="">Choose a repository</option>
+              </select>
+            </div>
+            <div class="field" id="ob-branch-section" hidden>
+              <label class="field-label" for="ob-branch">Branch</label>
+              <input id="ob-branch" type="text" placeholder="main">
+              <p class="field-hint">Defaults to the repository's default branch.</p>
+            </div>
+          </div>
+
+          <div class="step-action-row">
+            <button class="btn" id="ob-back-3" type="button">← Back</button>
+            <button class="btn btn-primary" id="ob-finish" type="button">Save &amp; finish</button>
+          </div>
+        </div>
+
+      </div><!-- /.step-card -->
+
+      <!-- ── Success ──────────────────────────────────────────── -->
+      <div class="success-card" id="ob-success">
+        <div class="success-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </div>
+        <h2 class="success-title">You're all set!</h2>
+        <p class="success-body">
+          LeetGit is connected to your repository. Head to LeetCode, solve a problem, and your submission will be committed automatically.
+        </p>
+        <div class="btn-row" style="justify-content:center">
+          <a class="btn btn-primary" href="https://leetcode.com/problemset/" target="_blank" rel="noreferrer">
+            Solve a problem ↗
+          </a>
+          <a class="btn" href="options.html">Open Settings</a>
+        </div>
+      </div>
+
+    </div><!-- /.onboarding-shell -->
+
+    <script type="module" src="src/onboarding.js"></script>
   </body>
 </html>
