@@ -1,4 +1,7 @@
-import { CONFIG } from "./config.js";
+let CONFIG = {};
+try {
+  ({ CONFIG } = await import("./config.js"));
+} catch { /* production — config.js not present */ }
 
 export const DEFAULT_SETTINGS = {
   syncStatuses: ["Accepted"],
