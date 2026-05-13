@@ -38,12 +38,7 @@ No copy-paste, no manual uploads. Solve a problem, get a commit. Your entire Lee
 ### Popup & floating panel
 
 <p align="center">
-  <img src="src/assets/popup.png" alt="Extension popup showing recent syncs, connection status, and sync toggle" width="300"/>
-  &nbsp;&nbsp;&nbsp;
-  <img src="src/assets/floating-modal.png" alt="Floating sync panel on LeetCode" width="300"/>
-</p>
-<p align="center">
-  <em>Extension popup (left) &nbsp;·&nbsp; Floating panel on LeetCode (right)</em>
+  <img src="src/assets/promo-1280x800.png" alt="Extension popup and floating panel on LeetCode" width="760"/>
 </p>
 
 ---
@@ -51,17 +46,17 @@ No copy-paste, no manual uploads. Solve a problem, get a commit. Your entire Lee
 ### Setup guide
 
 <p align="center">
-  <img src="src/assets/setup-guide-step-1.png" alt="Setup step 1 — Pick a repository" width="680"/>
+  <img src="src/assets/promo-setup-step-1.png" alt="Setup step 1 — Pick a repository" width="760"/>
   <br/><em>Step 1 — Pick a repository</em>
 </p>
 
 <p align="center">
-  <img src="src/assets/setup-guide-step-2.png" alt="Setup step 2 — Generate an access token" width="680"/>
+  <img src="src/assets/promo-setup-step-2.png" alt="Setup step 2 — Generate an access token" width="760"/>
   <br/><em>Step 2 — Generate a GitHub access token</em>
 </p>
 
 <p align="center">
-  <img src="src/assets/setup-guide-step-3.png" alt="Setup step 3 — Connect LeetGit" width="680"/>
+  <img src="src/assets/promo-setup-step-3.png" alt="Setup step 3 — Connect LeetGit" width="760"/>
   <br/><em>Step 3 — Connect LeetGit</em>
 </p>
 
@@ -70,7 +65,7 @@ No copy-paste, no manual uploads. Solve a problem, get a commit. Your entire Lee
 ### Settings
 
 <p align="center">
-  <img src="src/assets/options-1.png" alt="Settings — Repository" width="720"/>
+  <img src="src/assets/promo-settings.png" alt="Settings — Repository" width="760"/>
   <br/><em>Repository — GitHub token, repo, branch, and subfolder</em>
 </p>
 
@@ -93,25 +88,6 @@ No copy-paste, no manual uploads. Solve a problem, get a commit. Your entire Lee
   <img src="src/assets/options-5.png" alt="Settings — Data" width="720"/>
   <br/><em>Data — Export, import, or wipe all extension data</em>
 </p>
-<!--
-<p align="center">
-  <img src="docs/screenshot-panel.png" alt="Floating sync panel on LeetCode" width="360"/>
-  <br/>
-  <em>Floating panel after a successful sync</em>
-</p>
-
-<p align="center">
-  <img src="docs/screenshot-popup.png" alt="Extension popup" width="360"/>
-  <br/>
-  <em>Popup showing recent syncs and connection status</em>
-</p>
-
-<p align="center">
-  <img src="docs/screenshot-settings.png" alt="Settings page" width="720"/>
-  <br/>
-  <em>Settings page — Repository section</em>
-</p>
--->
 
 ---
 
