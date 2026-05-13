@@ -50,7 +50,9 @@
   });
 
   async function handleCapturedSubmission(payload) {
+    if (isPaused) return;
     settings = await chrome.runtime.sendMessage({ type: "LEETGIT_GET_CONFIG" }).then((response) => response.config?.settings).catch(() => null);
+    if (isPaused) return;
     if (settings?.commitMessageMode === "prompt") {
       const [codeHash, notesHash] = await Promise.all([sha256(payload.code), sha256(payload.notes || "")]);
       const { isDuplicate } = await chrome.runtime.sendMessage({
@@ -276,13 +278,14 @@
 
     panel.innerHTML = `
       <div class="leetgit-panel-head">
-        <div class="leetgit-head-left">
-          <button class="leetgit-pause-btn" data-action="toggle-pause" type="button" title="${isPaused ? "Resume syncing" : "Pause syncing"}">
-            ${isPaused ? pausePlayIcon("play") : pausePlayIcon("pause")}
+        <strong>LeetGit</strong>
+        <div class="leetgit-head-right">
+          <button class="leetgit-sync-toggle${isPaused ? " leetgit-sync-toggle-off" : ""}" data-action="toggle-pause" type="button" aria-pressed="${!isPaused}" title="${isPaused ? "Resume syncing" : "Pause syncing"}">
+            <span class="leetgit-sync-toggle-thumb"></span>
           </button>
-          <strong>LeetGit</strong>
+          <span class="leetgit-sync-toggle-label${isPaused ? " leetgit-sync-toggle-label-off" : ""}">${isPaused ? "OFF" : "ON"}</span>
+          <span class="leetgit-pill">${escapeHtml(STATE[currentState].label)}</span>
         </div>
-        <span class="leetgit-pill${isPaused ? " leetgit-pill-paused" : ""}">${isPaused ? "Paused" : escapeHtml(STATE[currentState].label)}</span>
       </div>
       ${isPaused ? `<div class="leetgit-paused-notice">Syncing is paused. New submissions will not be committed.</div>` : ""}
       ${lastDiagnostic && !isPaused ? `<div class="leetgit-diagnostic">${escapeHtml(lastDiagnostic)}</div>` : ""}
@@ -343,12 +346,6 @@
     });
   }
 
-  function pausePlayIcon(type) {
-    if (type === "pause") {
-      return `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="5" y="4" width="4" height="16" rx="1"/><rect x="15" y="4" width="4" height="16" rx="1"/></svg>`;
-    }
-    return `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 4l14 8-14 8V4z"/></svg>`;
-  }
 
   function injectStyles() {
     if (document.getElementById("leetgit-styles")) return;
@@ -559,33 +556,48 @@
         padding: 0;
         text-decoration: none;
       }
-      .leetgit-head-left {
+      .leetgit-head-right {
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 5px;
       }
-      .leetgit-pause-btn {
-        display: inline-grid;
-        place-items: center;
-        width: 22px;
-        height: 22px;
-        border: 1px solid #cbd5e1;
-        border-radius: 5px;
-        background: #f8fafc;
-        color: #64748b;
+      .leetgit-sync-toggle {
+        position: relative;
+        width: 30px;
+        height: 17px;
+        border-radius: 999px;
+        border: none;
+        background: #22c55e;
         cursor: pointer;
         padding: 0;
         flex-shrink: 0;
-        transition: background 120ms, color 120ms, border-color 120ms;
+        transition: background 160ms;
       }
-      .leetgit-pause-btn:hover {
-        background: #f1f5f9;
-        border-color: #94a3b8;
-        color: #0f172a;
+      .leetgit-sync-toggle.leetgit-sync-toggle-off {
+        background: #cbd5e1;
       }
-      .leetgit-pill-paused {
-        background: #fef9c3;
-        color: #854d0e;
+      .leetgit-sync-toggle-thumb {
+        position: absolute;
+        top: 2.5px;
+        left: 2.5px;
+        width: 12px;
+        height: 12px;
+        border-radius: 999px;
+        background: #fff;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        transition: transform 160ms;
+      }
+      .leetgit-sync-toggle:not(.leetgit-sync-toggle-off) .leetgit-sync-toggle-thumb {
+        transform: translateX(13px);
+      }
+      .leetgit-sync-toggle-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: #047857;
+        min-width: 18px;
+      }
+      .leetgit-sync-toggle-label-off {
+        color: #94a3b8;
       }
       .leetgit-paused-notice {
         margin-top: 8px;
