@@ -86,11 +86,14 @@ function renderTokenWarning() {
 }
 
 function renderSyncRow(sync) {
-  const title = `${sync.problemNumber}. ${sync.title}`;
+  const title = escapeHtml(`${sync.problemNumber}. ${sync.title}`);
+  const titleHtml = sync.problemUrl
+    ? `<button class="sync-title sync-title-link" data-url="${escapeAttribute(sync.problemUrl)}" type="button">${title}</button>`
+    : `<div class="sync-title">${title}</div>`;
   return `
     <div class="sync-row">
       <div>
-        <div class="sync-title">${escapeHtml(title)}</div>
+        ${titleHtml}
         <div class="sync-meta">${escapeHtml(sync.language)} · ${sync.status === "Accepted" ? "✅" : "❌"} ${escapeHtml(sync.status)} · ${relativeTime(sync.submittedAt)}</div>
       </div>
       ${sync.githubUrl ? `<button class="open-file" data-url="${escapeAttribute(sync.githubUrl)}" type="button">↗</button>` : ""}
