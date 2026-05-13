@@ -98,6 +98,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message?.type === "LEETGIT_QUICK_DUPLICATE_CHECK") {
+    quickDuplicateCheck(message)
+      .then((result) => sendResponse({ ok: true, ...result }))
+      .catch(() => sendResponse({ ok: true, isDuplicate: false }));
+    return true;
+  }
+
   if (message?.type !== "LEETGIT_SUBMISSION_CAPTURED") return false;
 
   syncCapturedSubmission(message.payload, sender.tab?.id)
@@ -110,7 +117,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true;
 });
 
+let syncLock = Promise.resolve();
+
+const headCache = new Map(); // key → { commitSha, treeSha, capturedAt }
+const HEAD_CACHE_TTL_MS = 60 * 60 * 1000;
+
 async function syncCapturedSubmission(raw, tabId = null) {
+  return new Promise((resolve, reject) => {
+    syncLock = syncLock
+      .catch(() => {})
+      .then(() => syncCapturedSubmissionCore(raw, tabId))
+      .then(resolve, reject);
+  });
+}
+
+async function syncCapturedSubmissionCore(raw, tabId = null) {
   const config = await getRuntimeConfig();
   const status = normalizeLeetCodeStatus(raw.status);
   if (!status) {
@@ -242,16 +263,16 @@ async function fetchProblemMetadata(titleSlug) {
 }
 
 async function syncToGitHub(submission, config) {
-  const branch = await getBranchSnapshot(config);
+  let branch = await getBranchSnapshot(config);
 
   const filename = buildSubmissionFilename(submission);
   const submissionPath = buildSubmissionPath(submission, config.repo.subfolder);
   const historyPath = buildHistoryPath(submission, config.repo.subfolder);
-  const historyMarkdown = await readBlobFromTree(branch.tree, historyPath, config);
-  const previousEntries = parseHistoryEntries(historyMarkdown);
+  let historyMarkdown = await readBlobFromTree(branch.tree, historyPath, config);
+  let previousEntries = parseHistoryEntries(historyMarkdown);
 
   if (config.settings.skipDuplicates && previousEntries.length) {
-    const latestMarkdown = await readBlobFromTree(branch.tree, previousEntries[0].filePath || siblingPath(historyPath, previousEntries[0].file), config);
+    const latestMarkdown = await readBlobFromTree(branch.tree, siblingPath(historyPath, previousEntries[0].file), config);
     const latestHash = extractCodeHash(latestMarkdown);
     const latestNotesHash = extractNotesHash(latestMarkdown) ?? "0".repeat(64);
     const latestStatus = previousEntries[0].status.replace(/^[✅❌]\s*/, "");
@@ -267,67 +288,163 @@ async function syncToGitHub(submission, config) {
   }
 
   const solutionMarkdown = renderSolutionMarkdown(submission);
-  const nextHistoryMarkdown = renderHistoryMarkdown(submission, previousEntries, filename);
-  const solutionBlob = await createBlob(solutionMarkdown, config);
-  const historyBlob = await createBlob(nextHistoryMarkdown, config);
-  const nextTree = await github(`/repos/${config.repo.owner}/${config.repo.name}/git/trees`, {
-    token: config.token,
-    method: "POST",
-    body: {
-      base_tree: branch.treeSha,
-      tree: [
-        { path: submissionPath, mode: "100644", type: "blob", sha: solutionBlob.sha },
-        { path: historyPath, mode: "100644", type: "blob", sha: historyBlob.sha }
-      ]
-    }
-  });
-  const nextCommit = await github(`/repos/${config.repo.owner}/${config.repo.name}/git/commits`, {
-    token: config.token,
-    method: "POST",
-    body: {
-      message: getCommitMessage(submission, config),
-      tree: nextTree.sha,
-      parents: [branch.commitSha]
-    }
-  });
-  await github(`/repos/${config.repo.owner}/${config.repo.name}/git/refs/heads/${config.repo.branch}`, {
-    token: config.token,
-    method: "PATCH",
-    body: {
-      sha: nextCommit.sha,
-      force: false
-    }
-  });
+  const commitMessage = getCommitMessage(submission, config);
 
-  return {
-    skipped: false,
-    commitSha: nextCommit.sha,
-    submissionPath,
-    historyPath,
-    githubUrl: `https://github.com/${config.repo.owner}/${config.repo.name}/blob/${config.repo.branch}/${submissionPath}`
-  };
-}
+  // Create both blobs in parallel — they are independent.
+  let [solutionBlob, historyBlob] = await Promise.all([
+    createBlob(solutionMarkdown, config),
+    createBlob(renderHistoryMarkdown(submission, previousEntries, filename), config)
+  ]);
 
-async function getBranchSnapshot(config) {
-  try {
-    return await readBranchSnapshot(config.repo.branch, config);
-  } catch (error) {
-    if (!isEmptyRepositoryError(error)) throw error;
-    await initializeEmptyRepository(config);
-    return readBranchSnapshot(config.repo.branch, config);
+  // Retry loop: on 422 the local HEAD cache is invalidated so the re-read bypasses
+  // any eventual-consistency lag on GitHub's ref endpoint.
+  const RETRY_DELAYS = [5000, 10000];
+  const key = headCacheKey(config);
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const nextTree = await github(`/repos/${config.repo.owner}/${config.repo.name}/git/trees`, {
+      token: config.token,
+      method: "POST",
+      body: {
+        base_tree: branch.treeSha,
+        tree: [
+          { path: submissionPath, mode: "100644", type: "blob", sha: solutionBlob.sha },
+          { path: historyPath, mode: "100644", type: "blob", sha: historyBlob.sha }
+        ]
+      }
+    });
+    const nextCommit = await github(`/repos/${config.repo.owner}/${config.repo.name}/git/commits`, {
+      token: config.token,
+      method: "POST",
+      body: {
+        message: commitMessage,
+        tree: nextTree.sha,
+        parents: [branch.commitSha]
+      }
+    });
+
+    try {
+      const patched = await github(`/repos/${config.repo.owner}/${config.repo.name}/git/refs/heads/${config.repo.branch}`, {
+        token: config.token,
+        method: "PATCH",
+        body: { sha: nextCommit.sha, force: false }
+      });
+      // Use the PATCH response as the authoritative new HEAD — avoids any read-after-write lag.
+      headCache.set(key, { commitSha: patched.object.sha, treeSha: nextTree.sha, capturedAt: Date.now() });
+      await persistHead(config, patched.object.sha, nextTree.sha);
+      return {
+        skipped: false,
+        commitSha: patched.object.sha,
+        submissionPath,
+        historyPath,
+        githubUrl: `https://github.com/${config.repo.owner}/${config.repo.name}/blob/${config.repo.branch}/${submissionPath}`
+      };
+    } catch (patchError) {
+      if (!isStaleRefError(patchError) || attempt >= 3) throw patchError;
+
+      // Invalidate cached HEAD so the re-read goes through the cold path.
+      await invalidateHead(config);
+      await sleep(RETRY_DELAYS[attempt - 1]);
+      branch = await getBranchSnapshot(config);
+
+      // If our file already landed (concurrent sync), return as skipped.
+      const freshHistory = await readBlobFromTree(branch.tree, historyPath, config);
+      const freshEntries = parseHistoryEntries(freshHistory);
+      if (freshEntries.some((e) => e.file === filename)) {
+        const dupPath = siblingPath(historyPath, filename);
+        return {
+          skipped: true,
+          reason: "duplicate",
+          submissionPath: dupPath,
+          githubUrl: `https://github.com/${config.repo.owner}/${config.repo.name}/blob/${config.repo.branch}/${dupPath}`
+        };
+      }
+      previousEntries = freshEntries;
+      historyBlob = await createBlob(renderHistoryMarkdown(submission, previousEntries, filename), config);
+    }
   }
 }
 
-async function readBranchSnapshot(branchName, config) {
-  const ref = await github(`/repos/${config.repo.owner}/${config.repo.name}/git/ref/heads/${encodeURIComponent(branchName)}`, { token: config.token });
-  const baseCommit = await github(`/repos/${config.repo.owner}/${config.repo.name}/git/commits/${ref.object.sha}`, { token: config.token });
-  const tree = await github(`/repos/${config.repo.owner}/${config.repo.name}/git/trees/${baseCommit.tree.sha}?recursive=1`, { token: config.token });
-  return {
-    ref,
-    commitSha: ref.object.sha,
-    treeSha: baseCommit.tree.sha,
-    tree
-  };
+function headCacheKey(config) {
+  return `${config.repo.owner}/${config.repo.name}#${config.repo.branch}`;
+}
+
+async function loadPersistedHead(config) {
+  const stored = await chromeStorageGet("lastSyncedHead");
+  if (!stored || stored.key !== headCacheKey(config)) return null;
+  if (Date.now() - stored.ts > HEAD_CACHE_TTL_MS) return null;
+  return { commitSha: stored.commitSha, treeSha: stored.treeSha };
+}
+
+async function persistHead(config, commitSha, treeSha) {
+  try {
+    await chromeStorageSet({ lastSyncedHead: { key: headCacheKey(config), commitSha, treeSha, ts: Date.now() } });
+  } catch {}
+}
+
+async function invalidateHead(config) {
+  headCache.delete(headCacheKey(config));
+  try {
+    await chrome.storage.local.remove("lastSyncedHead");
+  } catch {}
+}
+
+async function getBranchSnapshot(config) {
+  const key = headCacheKey(config);
+
+  const mem = headCache.get(key);
+  if (mem && Date.now() - mem.capturedAt < HEAD_CACHE_TTL_MS) {
+    try {
+      return await readBranchSnapshotHot(config, mem);
+    } catch {
+      headCache.delete(key);
+    }
+  }
+
+  const persisted = await loadPersistedHead(config);
+  if (persisted) {
+    try {
+      const snapshot = await readBranchSnapshotHot(config, persisted);
+      headCache.set(key, { ...persisted, capturedAt: Date.now() });
+      return snapshot;
+    } catch {
+      await invalidateHead(config);
+    }
+  }
+
+  return readBranchSnapshotCold(config);
+}
+
+async function readBranchSnapshotCold(config) {
+  try {
+    return await fetchBranchSnapshot(config.repo.branch, config);
+  } catch (error) {
+    if (!isEmptyRepositoryError(error)) throw error;
+    await initializeEmptyRepository(config);
+    return fetchBranchSnapshot(config.repo.branch, config);
+  }
+}
+
+async function fetchBranchSnapshot(branchName, config) {
+  try {
+    const branch = await github(`/repos/${config.repo.owner}/${config.repo.name}/branches/${encodeURIComponent(branchName)}`, { token: config.token });
+    const commitSha = branch.commit.sha;
+    const treeSha = branch.commit.commit.tree.sha;
+    const tree = await github(`/repos/${config.repo.owner}/${config.repo.name}/git/trees/${treeSha}?recursive=1`, { token: config.token });
+    return { commitSha, treeSha, tree };
+  } catch (branchError) {
+    if (branchError.status !== 404) throw branchError;
+    // 404 from the branches endpoint may mean an empty repo — fall back to the ref
+    // endpoint for accurate error classification (empty repos return 409 there).
+    const ref = await github(`/repos/${config.repo.owner}/${config.repo.name}/git/ref/heads/${encodeURIComponent(branchName)}`, { token: config.token });
+    const baseCommit = await github(`/repos/${config.repo.owner}/${config.repo.name}/git/commits/${ref.object.sha}`, { token: config.token });
+    const tree = await github(`/repos/${config.repo.owner}/${config.repo.name}/git/trees/${baseCommit.tree.sha}?recursive=1`, { token: config.token });
+    return { commitSha: ref.object.sha, treeSha: baseCommit.tree.sha, tree };
+  }
+}
+
+async function readBranchSnapshotHot(config, cached) {
+  const tree = await github(`/repos/${config.repo.owner}/${config.repo.name}/git/trees/${cached.treeSha}?recursive=1`, { token: config.token });
+  return { commitSha: cached.commitSha, treeSha: cached.treeSha, tree };
 }
 
 async function initializeEmptyRepository(config) {
@@ -511,6 +628,14 @@ function isMissingBranchError(error) {
   return (error.status === 404 || error.status === 422) && /branch|reference|not found/i.test(error.body || error.message || "");
 }
 
+function isStaleRefError(error) {
+  return error.status === 422 && /not a fast forward/i.test(error.body || error.message || "");
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function sha256(value) {
   const bytes = new TextEncoder().encode(value);
   const digest = await crypto.subtle.digest("SHA-256", bytes);
@@ -543,6 +668,7 @@ async function getRecentSyncs() {
 async function rememberRecentSync(submission, result) {
   const recentSyncs = await getRecentSyncs();
   recentSyncs.unshift({
+    titleSlug: submission.titleSlug,
     problemNumber: submission.problemNumber,
     title: submission.title,
     language: submission.language,
@@ -552,9 +678,20 @@ async function rememberRecentSync(submission, result) {
     githubUrl: result.githubUrl || null,
     submissionPath: result.submissionPath || null,
     duplicate: result.reason === "duplicate",
-    skipped: result.skipped || false
+    skipped: result.skipped || false,
+    codeHash: submission.codeHash,
+    notesHash: submission.notesHash
   });
   await chromeStorageSet({ recentSyncs: recentSyncs.slice(0, 20) });
+}
+
+async function quickDuplicateCheck({ titleSlug, status, codeHash, notesHash }) {
+  const recentSyncs = await getRecentSyncs();
+  const last = recentSyncs.find((s) => s.titleSlug === titleSlug && !s.skipped);
+  if (!last) return { isDuplicate: false };
+  return {
+    isDuplicate: last.codeHash === codeHash && last.notesHash === notesHash && last.status === status
+  };
 }
 
 function getCommitMessage(submission, config) {

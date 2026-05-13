@@ -31,6 +31,12 @@ export async function saveStoredConfig({ settings, token, repo }) {
   if (settings) next.settings = { ...DEFAULT_SETTINGS, ...settings };
   if (token !== undefined) next.token = token;
   if (repo) next.repo = { ...DEFAULT_REPO, ...repo };
+  if (repo) {
+    const prev = await chrome.storage.local.get("repo").then((r) => r.repo || {});
+    if (prev.owner !== next.repo.owner || prev.name !== next.repo.name || prev.branch !== next.repo.branch) {
+      await chrome.storage.local.remove("lastSyncedHead");
+    }
+  }
   await chrome.storage.local.set(next);
   return getStoredConfig();
 }

@@ -51,6 +51,18 @@
   async function handleCapturedSubmission(payload) {
     settings = await chrome.runtime.sendMessage({ type: "LEETGIT_GET_CONFIG" }).then((response) => response.config?.settings).catch(() => null);
     if (settings?.commitMessageMode === "prompt") {
+      const [codeHash, notesHash] = await Promise.all([sha256(payload.code), sha256(payload.notes || "")]);
+      const { isDuplicate } = await chrome.runtime.sendMessage({
+        type: "LEETGIT_QUICK_DUPLICATE_CHECK",
+        titleSlug: payload.titleSlug,
+        status: payload.status,
+        codeHash,
+        notesHash
+      }).catch(() => ({ isDuplicate: false }));
+      if (isDuplicate) {
+        submitCapturedSubmission(payload);
+        return;
+      }
       pendingSubmission = payload;
       setState("syncing", `Commit message needed for ${payload.titleSlug}`);
       panelOpen = true;
@@ -59,6 +71,12 @@
       return;
     }
     submitCapturedSubmission(payload);
+  }
+
+  async function sha256(value) {
+    const bytes = new TextEncoder().encode(value);
+    const digest = await crypto.subtle.digest("SHA-256", bytes);
+    return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
   }
 
   function submitCapturedSubmission(payload) {
@@ -245,7 +263,7 @@
       <div class="leetgit-list">${rows || `<div class="leetgit-empty">No synced submissions yet.</div>`}</div>
       <div class="leetgit-actions">
         ${settings?.commitMessageMode === "prompt" ? `<button class="leetgit-action" data-action="custom-message" type="button" ${pendingSubmission ? "" : "disabled"}>Custom commit message</button>` : ""}
-        ${lastFailure ? `<button class="leetgit-action" data-action="retry" type="button">Retry last failed sync</button>` : ""}
+        ${lastFailure ? `<button class="leetgit-action" data-action="retry" type="button" ${currentState === "syncing" ? "disabled" : ""}>Retry last failed sync</button>` : ""}
       </div>
       ${commitMessageForm}
       <button class="leetgit-options" data-action="settings" type="button">Settings</button>
