@@ -4,6 +4,8 @@ const tokenWarning = document.getElementById("token-warning");
 const recentSyncs = document.getElementById("recent-syncs");
 const settingsButton = document.getElementById("settings");
 const viewRepoButton = document.getElementById("view-repo");
+const pauseToggle = document.getElementById("pause-toggle");
+const pauseToggleLabel = document.getElementById("pause-toggle-label");
 
 let config = null;
 let state = null;
@@ -14,6 +16,7 @@ async function init() {
   settingsButton.addEventListener("click", () => sendMessage({ type: "LEETGIT_OPEN_SETTINGS" }));
   viewRepoButton.addEventListener("click", openRepo);
   repoLink.addEventListener("click", openRepo);
+  pauseToggle.addEventListener("click", togglePause);
   try {
     [config, state] = await Promise.all([
       sendMessage({ type: "LEETGIT_GET_CONFIG" }).then((response) => response.config),
@@ -27,6 +30,15 @@ async function init() {
   }
 }
 
+async function togglePause() {
+  const newPaused = !config.settings.paused;
+  try {
+    const response = await sendMessage({ type: "LEETGIT_SET_PAUSED", paused: newPaused });
+    config = response.config;
+    renderPauseToggle();
+  } catch {}
+}
+
 function render() {
   const connected = Boolean(config.token && config.repo.owner && config.repo.name);
   connectionPill.textContent = connected ? "Connected" : "Setup needed";
@@ -35,9 +47,18 @@ function render() {
   viewRepoButton.disabled = !connected;
 
   renderTokenWarning();
+  renderPauseToggle();
   recentSyncs.innerHTML = (state.recentSyncs || []).slice(0, 3).map(renderSyncRow).join("") || (
     `<div class="empty">No synced submissions yet.</div>`
   );
+}
+
+function renderPauseToggle() {
+  const paused = Boolean(config?.settings?.paused);
+  pauseToggle.setAttribute("aria-pressed", String(!paused));
+  pauseToggle.classList.toggle("sync-toggle-off", paused);
+  pauseToggleLabel.textContent = paused ? "Paused" : "ON";
+  pauseToggleLabel.classList.toggle("sync-toggle-state-paused", paused);
 }
 
 function renderTokenWarning() {

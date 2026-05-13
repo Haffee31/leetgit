@@ -31,6 +31,7 @@
   let pendingSubmission = null;
   let settings = null;
   let isConnected = null;
+  let isPaused = false;
 
   window.addEventListener("message", (event) => {
     if (event.source !== window) return;
@@ -127,7 +128,9 @@
       recentSyncs = message.recentSyncs || recentSyncs;
       const skipTitle = message.reason === "duplicate"
         ? "LeetGit ready — commit skipped (same code & notes)"
-        : `LeetGit ready — skipped (${message.reason})`;
+        : message.reason === "paused"
+          ? "LeetGit paused — submission not synced"
+          : `LeetGit ready — skipped (${message.reason})`;
       setState("idle", skipTitle);
       renderPanel();
       return;
@@ -138,6 +141,20 @@
       setState("error", "Sync failed - click for details");
       renderPanel();
     }
+  });
+
+  chrome.storage.onChanged.addListener((changes) => {
+    if (!changes.settings) return;
+    const newSettings = changes.settings.newValue;
+    if (!newSettings) return;
+    settings = newSettings;
+    const wasPaused = isPaused;
+    isPaused = Boolean(newSettings.paused);
+    if (isPaused && !wasPaused && pendingSubmission) {
+      pendingSubmission = null;
+    }
+    if (root) root.dataset.paused = isPaused ? "true" : "false";
+    renderPanel();
   });
 
   init();
@@ -194,7 +211,11 @@
       const cfg = configResponse.config;
       settings = cfg?.settings || null;
       isConnected = Boolean(cfg?.token && cfg?.repo?.owner && cfg?.repo?.name);
-      if (root) root.dataset.connected = isConnected ? "true" : "false";
+      isPaused = Boolean(settings?.paused);
+      if (root) {
+        root.dataset.connected = isConnected ? "true" : "false";
+        root.dataset.paused = isPaused ? "true" : "false";
+      }
     }
     renderPanel();
   }
@@ -227,8 +248,9 @@
 
   function renderPanel() {
     if (!panel) return;
+    const retryDisabled = currentState === "syncing" || isPaused;
     const commitMessageForm = settings?.commitMessageMode === "prompt" ? `
-      <form class="leetgit-commit-message" ${pendingSubmission ? "" : "hidden"}>
+      <form class="leetgit-commit-message" ${pendingSubmission && !isPaused ? "" : "hidden"}>
         <textarea class="leetgit-commit-input" rows="3" placeholder="Commit message for this submission"></textarea>
         <div class="leetgit-actions">
           <button class="leetgit-action" data-action="sync-custom-message" type="submit">Sync with message</button>
@@ -254,20 +276,31 @@
 
     panel.innerHTML = `
       <div class="leetgit-panel-head">
-        <strong>LeetGit</strong>
-        <span class="leetgit-pill">${escapeHtml(STATE[currentState].label)}</span>
+        <div class="leetgit-head-left">
+          <button class="leetgit-pause-btn" data-action="toggle-pause" type="button" title="${isPaused ? "Resume syncing" : "Pause syncing"}">
+            ${isPaused ? pausePlayIcon("play") : pausePlayIcon("pause")}
+          </button>
+          <strong>LeetGit</strong>
+        </div>
+        <span class="leetgit-pill${isPaused ? " leetgit-pill-paused" : ""}">${isPaused ? "Paused" : escapeHtml(STATE[currentState].label)}</span>
       </div>
-      ${lastDiagnostic ? `<div class="leetgit-diagnostic">${escapeHtml(lastDiagnostic)}</div>` : ""}
+      ${isPaused ? `<div class="leetgit-paused-notice">Syncing is paused. New submissions will not be committed.</div>` : ""}
+      ${lastDiagnostic && !isPaused ? `<div class="leetgit-diagnostic">${escapeHtml(lastDiagnostic)}</div>` : ""}
       ${lastError ? `<div class="leetgit-error">${escapeHtml(lastError)}</div>` : ""}
       <div class="leetgit-section-title">Recent syncs</div>
       <div class="leetgit-list">${rows || `<div class="leetgit-empty">No synced submissions yet.</div>`}</div>
       <div class="leetgit-actions">
-        ${settings?.commitMessageMode === "prompt" && pendingSubmission ? `<button class="leetgit-action" data-action="custom-message" type="button">Custom commit message</button>` : ""}
-        ${lastFailure ? `<button class="leetgit-action" data-action="retry" type="button" ${currentState === "syncing" ? "disabled" : ""}>Retry last failed sync</button>` : ""}
+        ${settings?.commitMessageMode === "prompt" && pendingSubmission && !isPaused ? `<button class="leetgit-action" data-action="custom-message" type="button">Custom commit message</button>` : ""}
+        ${lastFailure ? `<button class="leetgit-action" data-action="retry" type="button" ${retryDisabled ? "disabled" : ""}>Retry last failed sync</button>` : ""}
       </div>
       ${commitMessageForm}
       <button class="leetgit-options" data-action="settings" type="button">Settings</button>
     `;
+
+    panel.querySelector('[data-action="toggle-pause"]')?.addEventListener("click", async () => {
+      const newPaused = !isPaused;
+      await chrome.runtime.sendMessage({ type: "LEETGIT_SET_PAUSED", paused: newPaused }).catch(() => {});
+    });
 
     panel.querySelector('[data-action="retry"]')?.addEventListener("click", async () => {
       setState("syncing", "Retrying last failed sync...");
@@ -308,6 +341,13 @@
       if (!pendingSubmission) return;
       submitCapturedSubmission(pendingSubmission);
     });
+  }
+
+  function pausePlayIcon(type) {
+    if (type === "pause") {
+      return `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="5" y="4" width="4" height="16" rx="1"/><rect x="15" y="4" width="4" height="16" rx="1"/></svg>`;
+    }
+    return `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 4l14 8-14 8V4z"/></svg>`;
   }
 
   function injectStyles() {
@@ -518,6 +558,62 @@
         font: inherit;
         padding: 0;
         text-decoration: none;
+      }
+      .leetgit-head-left {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .leetgit-pause-btn {
+        display: inline-grid;
+        place-items: center;
+        width: 22px;
+        height: 22px;
+        border: 1px solid #cbd5e1;
+        border-radius: 5px;
+        background: #f8fafc;
+        color: #64748b;
+        cursor: pointer;
+        padding: 0;
+        flex-shrink: 0;
+        transition: background 120ms, color 120ms, border-color 120ms;
+      }
+      .leetgit-pause-btn:hover {
+        background: #f1f5f9;
+        border-color: #94a3b8;
+        color: #0f172a;
+      }
+      .leetgit-pill-paused {
+        background: #fef9c3;
+        color: #854d0e;
+      }
+      .leetgit-paused-notice {
+        margin-top: 8px;
+        padding: 7px 9px;
+        border-radius: 6px;
+        background: #fef9c3;
+        color: #854d0e;
+        font-size: 12px;
+        line-height: 1.35;
+      }
+      #leetgit-root[data-paused="true"] #leetgit-button {
+        color: #92400e;
+        border-color: #fbbf24;
+      }
+      #leetgit-root[data-paused="true"] #leetgit-button::before {
+        background: #f59e0b !important;
+      }
+      #leetgit-root[data-paused="true"] #leetgit-button::after {
+        content: "⏸";
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        background: rgba(254, 243, 199, 0.88);
+        border-radius: 999px;
+        font-size: 11px;
+        color: #92400e;
+        font-family: system-ui, sans-serif;
       }
       .leetgit-commit-message {
         margin-top: 10px;

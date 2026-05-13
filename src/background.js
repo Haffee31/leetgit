@@ -105,6 +105,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message?.type === "LEETGIT_SET_PAUSED") {
+    getStoredConfig()
+      .then((config) => saveStoredConfig({ settings: { ...config.settings, paused: message.paused } }))
+      .then((config) => sendResponse({ ok: true, config }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+
   if (message?.type !== "LEETGIT_SUBMISSION_CAPTURED") return false;
 
   syncCapturedSubmission(message.payload, sender.tab?.id)
@@ -133,6 +141,11 @@ async function syncCapturedSubmission(raw, tabId = null) {
 
 async function syncCapturedSubmissionCore(raw, tabId = null) {
   const config = await getRuntimeConfig();
+  if (config.settings.paused) {
+    const result = { skipped: true, reason: "paused" };
+    notifyTab(tabId, { type: "LEETGIT_SYNC_SKIPPED", ...result, recentSyncs: await getRecentSyncs() });
+    return result;
+  }
   const status = normalizeLeetCodeStatus(raw.status);
   if (!status) {
     const result = { skipped: true, reason: "unsupported-status", status: raw.status };
@@ -495,6 +508,8 @@ async function createContentFile(path, content, branchName, config) {
 }
 
 async function retryLastFailed(tabId = null) {
+  const config = await getStoredConfig();
+  if (config.settings.paused) throw new Error("LeetGit is paused. Resume to retry.");
   const queue = (await chromeStorageGet("retryQueue")) || [];
   const lastFailure = queue[0];
   if (!lastFailure?.raw) throw new Error("No failed sync to retry.");
@@ -502,6 +517,8 @@ async function retryLastFailed(tabId = null) {
 }
 
 async function retryQueuedFailures(exceptSubmissionId = null) {
+  const config = await getStoredConfig();
+  if (config.settings.paused) return;
   const queue = (await chromeStorageGet("retryQueue")) || [];
   const next = queue.find((failure) => failure.raw?.submissionId !== exceptSubmissionId);
   if (!next) return;
