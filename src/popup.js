@@ -11,6 +11,8 @@ const pauseToggleLabel = document.getElementById("pause-toggle-label");
 let config = null;
 let state = null;
 
+document.getElementById("credit-year").textContent = new Date().getFullYear();
+
 init();
 
 async function init() {

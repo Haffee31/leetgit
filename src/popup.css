@@ -276,3 +276,21 @@ h2 {
 }
 .footer button:last-child:hover { background: var(--leet-green-dark); }
 .footer button:last-child:disabled { background: var(--leet-green); }
+
+/* ─── Credit footer ───────────────────────────────────────────────── */
+.popup-credit {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-muted);
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.credit-link {
+  color: #0969da;
+  text-decoration: underline;
+  font-weight: 600;
+}
+.credit-link:hover { opacity: 0.75; }
