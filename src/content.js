@@ -397,7 +397,7 @@
         content: "";
         position: absolute;
         width: 9px; height: 9px;
-        right: 0; bottom: 0;
+        right: 0; top: 0;
         border-radius: 999px;
         background: #cf222e;
         border: 2px solid #fff;
