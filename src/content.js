@@ -36,6 +36,7 @@
   window.addEventListener("message", (event) => {
     if (event.source !== window) return;
     if (event.data?.type === "LEETGIT_PAGE_DIAGNOSTIC") {
+      if (isPaused) return;
       lastDiagnostic = formatDiagnostic(event.data.stage, event.data.detail);
       if (event.data.stage === "submit-seen" || event.data.stage === "submission-id-seen") {
         setState("syncing", lastDiagnostic);
