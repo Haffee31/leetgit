@@ -111,7 +111,8 @@
               </div>
               <div class="field">
                 <label class="field-label" for="subfolder">Subfolder <span style="font-weight:400;color:var(--text-muted)">(optional)</span></label>
-                <input id="subfolder" type="text" placeholder="e.g. solutions">
+                <input id="subfolder" type="text" placeholder="e.g. solutions" list="subfolder-list">
+                <datalist id="subfolder-list"></datalist>
                 <p class="field-hint">Nest all solution files inside this subfolder. Leave empty to commit to the repo root.</p>
               </div>
             </div>
