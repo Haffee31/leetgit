@@ -49,6 +49,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
 
+  if (message?.type === "LEETGIT_OPEN_SHORTCUTS") {
+    chrome.tabs.create({ url: "chrome://extensions/shortcuts" });
+    sendResponse({ ok: true });
+    return false;
+  }
+
   if (message?.type === "LEETGIT_SAVE_CONFIG") {
     saveStoredConfig(message.config || {})
       .then((config) => sendResponse({ ok: true, config }))
