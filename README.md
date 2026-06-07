@@ -145,6 +145,7 @@ That's it. Solve a problem on LeetCode and watch the commit land in your repo.
 | Action | How |
 |---|---|
 | Sync a submission | Just submit on LeetCode — LeetGit handles the rest |
+| Open / close the panel | Press **Alt+Shift+L** on any LeetCode problem page |
 | Check recent syncs | Click the toolbar icon; last 3 syncs are shown with GitHub links |
 | Pause / resume | Toggle the ON/OFF switch in the popup or the floating panel |
 | Retry a failed sync | Click **Retry last failed sync** in the floating panel |
