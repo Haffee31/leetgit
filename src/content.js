@@ -40,6 +40,7 @@
   let recentSyncs = [];
   let lastFailure = null;
   let pendingSubmission = null;
+  let submitting = false;
   let settings = null;
   let repo = null;
   let isConnected = null;
@@ -100,13 +101,16 @@
   }
 
   function submitCapturedSubmission(payload) {
-    pendingSubmission = null;
+    submitting = true;
     stageLabel = STAGE_LABEL["submit-seen"];
     setState("syncing", `Submitting ${payload.titleSlug}…`);
+    renderPanel();
     chrome.runtime.sendMessage({
       type: "LEETGIT_SUBMISSION_CAPTURED",
       payload
     }).then((response) => {
+      submitting = false;
+      pendingSubmission = null;
       if (!response?.ok) {
         lastError = response?.error || "Couldn't save.";
         stageLabel = null;
@@ -128,6 +132,8 @@
       scheduleIdle();
       hydrateState();
     }).catch((error) => {
+      submitting = false;
+      pendingSubmission = null;
       lastError = error.message || "Couldn't save.";
       stageLabel = null;
       setState("error", "Couldn't save — click for details");
@@ -316,11 +322,11 @@
     const showCommitForm = settings?.commitMessageMode === "prompt" && pendingSubmission && !isPaused;
     const commitMessageForm = showCommitForm ? `
       <form class="leetgit-commit-message">
-        <textarea class="leetgit-commit-input" rows="3" placeholder="Commit message for this submission"></textarea>
+        <textarea class="leetgit-commit-input" rows="3" placeholder="Commit message for this submission" ${submitting ? "disabled" : ""}></textarea>
         <div class="leetgit-actions">
-          <button class="leetgit-action" data-action="sync-custom-message" type="submit">Commit</button>
-          <button class="leetgit-action leetgit-action-skip" data-action="skip-commit" type="button">Skip</button>
-          <button class="leetgit-action" data-action="sync-template-message" type="button">Use template</button>
+          <button class="leetgit-action" data-action="sync-custom-message" type="submit" ${submitting ? "disabled" : ""}>Commit</button>
+          <button class="leetgit-action leetgit-action-skip" data-action="skip-commit" type="button" ${submitting ? "disabled" : ""}>Skip</button>
+          <button class="leetgit-action" data-action="sync-template-message" type="button" ${submitting ? "disabled" : ""}>Use template</button>
         </div>
       </form>
     ` : "";
