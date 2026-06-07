@@ -21,6 +21,14 @@ import {
   renderSolutionMarkdown
 } from "./shared.js";
 
+chrome.commands.onCommand.addListener((command) => {
+  if (command !== "toggle-panel") return;
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const tabId = tabs[0]?.id;
+    if (tabId) chrome.tabs.sendMessage(tabId, { type: "LEETGIT_TOGGLE_PANEL" }).catch(() => {});
+  });
+});
+
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === "install") {
     chrome.tabs.create({ url: chrome.runtime.getURL("onboarding.html") });
@@ -37,6 +45,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message?.type === "LEETGIT_OPEN_SETTINGS") {
     chrome.runtime.openOptionsPage();
+    sendResponse({ ok: true });
+    return false;
+  }
+
+  if (message?.type === "LEETGIT_OPEN_SHORTCUTS") {
+    chrome.tabs.create({ url: "chrome://extensions/shortcuts" });
     sendResponse({ ok: true });
     return false;
   }

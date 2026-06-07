@@ -36,6 +36,15 @@ async function init() {
   bindSidebarNav();
   bindAutoSave();
   bindActions();
+  loadShortcut();
+}
+
+async function loadShortcut() {
+  const commands = await chrome.commands.getAll();
+  const cmd = commands.find((c) => c.name === "toggle-panel");
+  const display = document.getElementById("shortcut-display");
+  if (!display) return;
+  display.textContent = cmd?.shortcut || "No shortcut set";
 }
 
 // ── Sidebar navigation ─────────────────────────────────────────────
@@ -129,6 +138,9 @@ function bindActions() {
     withErrorHandling(importData, "data"));
   document.getElementById("wipe-data").addEventListener("click",
     withErrorHandling(wipeData, "data"));
+  document.getElementById("open-shortcuts").addEventListener("click", () => {
+    chrome.runtime.sendMessage({ type: "LEETGIT_OPEN_SHORTCUTS" });
+  });
 }
 
 // ── Status checks ──────────────────────────────────────────────────
