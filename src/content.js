@@ -84,7 +84,7 @@
         return;
       }
       pendingSubmission = payload;
-      stageLabel = "Waiting for your message";
+      stageLabel = "Waiting for commit message";
       setState("syncing", `Commit message needed for ${payload.titleSlug}`);
       panelOpen = true;
       panel.hidden = false;
