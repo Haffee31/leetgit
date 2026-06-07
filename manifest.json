@@ -3,6 +3,14 @@
   "name": "LeetGit",
   "version": "1.1.0",
   "description": "Automatically sync LeetCode submissions to GitHub. One solve, one commit — build your coding portfolio effortlessly.",
+  "commands": {
+    "toggle-panel": {
+      "suggested_key": {
+        "default": "Alt+Shift+L"
+      },
+      "description": "Toggle LeetGit panel"
+    }
+  },
   "permissions": ["storage", "notifications"],
   "host_permissions": [
     "https://leetcode.com/*",

@@ -142,6 +142,10 @@
   }
 
   chrome.runtime.onMessage.addListener((message) => {
+    if (message?.type === "LEETGIT_TOGGLE_PANEL") {
+      togglePanel();
+      return;
+    }
     if (message?.type === "LEETGIT_SYNC_STARTED") {
       stageLabel = STAGE_LABEL["pushing"];
       setState("syncing", `Saving ${message.title || "submission"} to GitHub…`);
