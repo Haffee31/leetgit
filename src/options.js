@@ -148,6 +148,11 @@ async function loadConfig() {
   tokenInput.value = loadedConfig.token || "";
   branchInput.value = loadedConfig.repo.branch || "main";
   subfolderInput.value = loadedConfig.repo.subfolder || "";
+  const subfolderList = document.getElementById("subfolder-list");
+  if (subfolderList) {
+    const folders = (loadedConfig.repo.recentFolders || []).filter((f) => f !== "");
+    subfolderList.innerHTML = folders.map((f) => `<option value="${escapeHtml(f)}">`).join("");
+  }
   skipDuplicatesInput.checked = Boolean(loadedConfig.settings.skipDuplicates);
   commitTemplateInput.value = loadedConfig.settings.commitMessageTemplate || "";
   for (const input of commitModeInputs) {

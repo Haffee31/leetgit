@@ -1,22 +1,33 @@
 (() => {
   const STATE = {
     idle: {
-      label: "LeetGit ready",
-      title: "LeetGit ready"
+      label: "Ready to sync",
+      title: "Ready to sync"
     },
     syncing: {
-      label: "Syncing...",
-      title: "Syncing submission..."
+      label: "Syncing…",
+      title: "Syncing submission…"
     },
     synced: {
-      label: "Synced",
-      title: "Synced"
+      label: "Saved ✓",
+      title: "Saved ✓"
     },
     error: {
-      label: "Sync failed",
-      title: "Sync failed - click for details"
+      label: "Couldn't save",
+      title: "Couldn't save — click for details"
     }
   };
+
+  const STAGE_LABEL = {
+    "submit-seen": "Submitting…",
+    "submission-id-seen": "Checking results…",
+    "result-polling": "Checking results…",
+    "result-poll-error": "Checking results…",
+    "check-complete": "Reading verdict…",
+    "pushing": "Saving to GitHub…"
+  };
+
+  let stageLabel = null;
 
   let currentState = "idle";
   let panelOpen = false;
@@ -29,7 +40,9 @@
   let recentSyncs = [];
   let lastFailure = null;
   let pendingSubmission = null;
+  let submitting = false;
   let settings = null;
+  let repo = null;
   let isConnected = null;
   let isPaused = false;
 
@@ -38,6 +51,7 @@
     if (event.data?.type === "LEETGIT_PAGE_DIAGNOSTIC") {
       if (isPaused) return;
       lastDiagnostic = formatDiagnostic(event.data.stage, event.data.detail);
+      stageLabel = STAGE_LABEL[event.data.stage] || stageLabel;
       if (event.data.stage === "submit-seen" || event.data.stage === "submission-id-seen") {
         setState("syncing", lastDiagnostic);
       }
@@ -52,7 +66,9 @@
 
   async function handleCapturedSubmission(payload) {
     if (isPaused) return;
-    settings = await chrome.runtime.sendMessage({ type: "LEETGIT_GET_CONFIG" }).then((response) => response.config?.settings).catch(() => null);
+    const cfg = await chrome.runtime.sendMessage({ type: "LEETGIT_GET_CONFIG" }).then((response) => response.config).catch(() => null);
+    settings = cfg?.settings || settings;
+    repo = cfg?.repo || repo;
     if (isPaused) return;
     if (settings?.commitMessageMode === "prompt") {
       const [codeHash, notesHash] = await Promise.all([sha256(payload.code), sha256(payload.notes || "")]);
@@ -68,6 +84,7 @@
         return;
       }
       pendingSubmission = payload;
+      stageLabel = "Waiting for commit message";
       setState("syncing", `Commit message needed for ${payload.titleSlug}`);
       panelOpen = true;
       panel.hidden = false;
@@ -84,46 +101,59 @@
   }
 
   function submitCapturedSubmission(payload) {
-    pendingSubmission = null;
-    setState("syncing", `Syncing ${payload.titleSlug}...`);
+    submitting = true;
+    stageLabel = STAGE_LABEL["submit-seen"];
+    setState("syncing", `Submitting ${payload.titleSlug}…`);
+    renderPanel();
     chrome.runtime.sendMessage({
       type: "LEETGIT_SUBMISSION_CAPTURED",
       payload
     }).then((response) => {
+      submitting = false;
+      pendingSubmission = null;
       if (!response?.ok) {
-        lastError = response?.error || "Sync failed.";
-        setState("error", "Sync failed - click for details");
+        lastError = response?.error || "Couldn't save.";
+        stageLabel = null;
+        setState("error", "Couldn't save — click for details");
         renderPanel();
         return;
       }
       if (response.result?.skipped) {
+        stageLabel = null;
         const skipTitle = response.result.reason === "duplicate"
-          ? "LeetGit ready — commit skipped (same code & notes)"
-          : `LeetGit ready — skipped (${response.result.reason})`;
+          ? "Ready to sync — commit skipped (same code & notes)"
+          : `Ready to sync — skipped (${response.result.reason})`;
         setState("idle", skipTitle);
         hydrateState();
         return;
       }
-      setState("synced", "Synced ✓");
+      stageLabel = null;
+      setState("synced", "Saved ✓");
       scheduleIdle();
       hydrateState();
     }).catch((error) => {
-      lastError = error.message || "Sync failed.";
-      setState("error", "Sync failed - click for details");
+      submitting = false;
+      pendingSubmission = null;
+      lastError = error.message || "Couldn't save.";
+      stageLabel = null;
+      setState("error", "Couldn't save — click for details");
       renderPanel();
     });
   }
 
   chrome.runtime.onMessage.addListener((message) => {
     if (message?.type === "LEETGIT_SYNC_STARTED") {
-      setState("syncing", `Syncing ${message.title || "submission"}...`);
+      stageLabel = STAGE_LABEL["pushing"];
+      setState("syncing", `Saving ${message.title || "submission"} to GitHub…`);
+      renderPanel();
       return;
     }
     if (message?.type === "LEETGIT_SYNC_COMPLETE") {
       recentSyncs = message.recentSyncs || recentSyncs;
       lastFailure = null;
       lastDiagnostic = "";
-      setState("synced", `Synced ✓ ${message.title} (${message.language}, ${message.status})`);
+      stageLabel = null;
+      setState("synced", `Saved ✓ ${message.title} (${message.language}, ${message.status})`);
       scheduleIdle();
       renderPanel();
       return;
@@ -131,11 +161,12 @@
     if (message?.type === "LEETGIT_SYNC_SKIPPED") {
       recentSyncs = message.recentSyncs || recentSyncs;
       lastDiagnostic = "";
+      stageLabel = null;
       const skipTitle = message.reason === "duplicate"
-        ? "LeetGit ready — commit skipped (same code & notes)"
+        ? "Ready to sync — commit skipped (same code & notes)"
         : message.reason === "paused"
-          ? "LeetGit paused — submission not synced"
-          : `LeetGit ready — skipped (${message.reason})`;
+          ? "Paused — submission not synced"
+          : `Ready to sync — skipped (${message.reason})`;
       setState("idle", skipTitle);
       renderPanel();
       return;
@@ -144,23 +175,30 @@
       lastError = message.error || "Unknown error";
       lastFailure = message.failure || null;
       lastDiagnostic = "";
-      setState("error", "Sync failed - click for details");
+      stageLabel = null;
+      setState("error", "Couldn't save — click for details");
       renderPanel();
     }
   });
 
   chrome.storage.onChanged.addListener((changes) => {
-    if (!changes.settings) return;
-    const newSettings = changes.settings.newValue;
-    if (!newSettings) return;
-    settings = newSettings;
-    const wasPaused = isPaused;
-    isPaused = Boolean(newSettings.paused);
-    if (isPaused && !wasPaused && pendingSubmission) {
-      pendingSubmission = null;
+    if (changes.settings) {
+      const newSettings = changes.settings.newValue;
+      if (newSettings) {
+        settings = newSettings;
+        const wasPaused = isPaused;
+        isPaused = Boolean(newSettings.paused);
+        if (isPaused && !wasPaused && pendingSubmission) {
+          pendingSubmission = null;
+        }
+        if (root) root.dataset.paused = isPaused ? "true" : "false";
+      }
     }
-    if (root) root.dataset.paused = isPaused ? "true" : "false";
-    renderPanel();
+    if (changes.repo) {
+      const newRepo = changes.repo.newValue;
+      if (newRepo) repo = newRepo;
+    }
+    if (changes.settings || changes.repo) renderPanel();
   });
 
   init();
@@ -212,11 +250,12 @@
       recentSyncs = stateResponse.recentSyncs || [];
       lastFailure = stateResponse.lastFailure || null;
       lastError = lastFailure?.error || "";
-      if (lastFailure) setState("error", "Sync failed - click for details");
+      if (lastFailure) { stageLabel = null; setState("error", "Couldn't save — click for details"); }
     }
     if (configResponse?.ok) {
       const cfg = configResponse.config;
       settings = cfg?.settings || null;
+      repo = cfg?.repo || null;
       isConnected = Boolean(cfg?.token && cfg?.repo?.owner && cfg?.repo?.name);
       isPaused = Boolean(settings?.paused);
       if (root) {
@@ -241,8 +280,8 @@
   }
 
   function buildIdleTitle() {
-    if (!recentSyncs.length) return "LeetGit ready";
-    return `LeetGit ready - Last sync: ${relativeTime(recentSyncs[0].submittedAt)}`;
+    if (!recentSyncs.length) return "Ready to sync";
+    return `Ready to sync — last saved ${relativeTime(recentSyncs[0].submittedAt)}`;
   }
 
   function togglePanel() {
@@ -258,12 +297,36 @@
   function renderPanel() {
     if (!panel) return;
     const retryDisabled = currentState === "syncing" || isPaused;
-    const commitMessageForm = settings?.commitMessageMode === "prompt" ? `
-      <form class="leetgit-commit-message" ${pendingSubmission && !isPaused ? "" : "hidden"}>
-        <textarea class="leetgit-commit-input" rows="3" placeholder="Commit message for this submission"></textarea>
+
+    // Build folder picker options
+    const currentFolder = repo?.subfolder || "";
+    const recentFolders = repo?.recentFolders || [];
+    const folderOptions = [
+      `<option value="">${escapeHtml("(repository root)")}</option>`,
+      ...recentFolders
+        .filter((f) => f !== "")
+        .map((f) => `<option value="${escapeAttribute(f)}" ${f === currentFolder ? "selected" : ""}>${escapeHtml(f)}</option>`),
+      ...(currentFolder && !recentFolders.includes(currentFolder)
+        ? [`<option value="${escapeAttribute(currentFolder)}" selected>${escapeHtml(currentFolder)}</option>`]
+        : []),
+      `<option value="__new__">+ New folder…</option>`
+    ].join("");
+    const folderPicker = `
+      <div class="leetgit-folder-row">
+        <label class="leetgit-folder-label" for="leetgit-folder-select">Commit folder</label>
+        <select class="leetgit-folder-select" id="leetgit-folder-select">${folderOptions}</select>
+        <input class="leetgit-folder-input" type="text" placeholder="folder name" style="display:none">
+      </div>
+    `;
+
+    const showCommitForm = settings?.commitMessageMode === "prompt" && pendingSubmission && !isPaused;
+    const commitMessageForm = showCommitForm ? `
+      <form class="leetgit-commit-message">
+        <textarea class="leetgit-commit-input" rows="3" placeholder="Commit message for this submission" ${submitting ? "disabled" : ""}></textarea>
         <div class="leetgit-actions">
-          <button class="leetgit-action" data-action="sync-custom-message" type="submit">Sync with message</button>
-          <button class="leetgit-action" data-action="sync-template-message" type="button">Use template</button>
+          <button class="leetgit-action" data-action="sync-custom-message" type="submit" ${submitting ? "disabled" : ""}>Commit</button>
+          <button class="leetgit-action leetgit-action-skip" data-action="skip-commit" type="button" ${submitting ? "disabled" : ""}>Skip</button>
+          <button class="leetgit-action" data-action="sync-template-message" type="button" ${submitting ? "disabled" : ""}>Use template</button>
         </div>
       </form>
     ` : "";
@@ -291,16 +354,16 @@
             <span class="leetgit-sync-toggle-thumb"></span>
           </button>
           <span class="leetgit-sync-toggle-label${isPaused ? " leetgit-sync-toggle-label-off" : ""}">${isPaused ? "OFF" : "ON"}</span>
-          <span class="leetgit-pill">${escapeHtml(STATE[currentState].label)}</span>
+          <span class="leetgit-pill">${escapeHtml(stageLabel || STATE[currentState].label)}</span>
         </div>
       </div>
       ${isPaused ? `<div class="leetgit-paused-notice">Syncing is paused. New submissions will not be committed.</div>` : ""}
       ${lastDiagnostic && !isPaused ? `<div class="leetgit-diagnostic">${escapeHtml(lastDiagnostic)}</div>` : ""}
       ${lastError ? `<div class="leetgit-error">${escapeHtml(lastError)}</div>` : ""}
-      <div class="leetgit-section-title">Recent syncs</div>
-      <div class="leetgit-list">${rows || `<div class="leetgit-empty">No synced submissions yet.</div>`}</div>
-      <div class="leetgit-actions">
-        ${settings?.commitMessageMode === "prompt" && pendingSubmission && !isPaused ? `<button class="leetgit-action" data-action="custom-message" type="button">Custom commit message</button>` : ""}
+      ${folderPicker}
+      <div class="leetgit-section-title" ${showCommitForm ? "hidden" : ""}>Recent syncs</div>
+      <div class="leetgit-list" ${showCommitForm ? "hidden" : ""}>${rows || `<div class="leetgit-empty">No synced submissions yet.</div>`}</div>
+      <div class="leetgit-actions" ${showCommitForm ? "hidden" : ""}>
         ${lastFailure ? `<button class="leetgit-action" data-action="retry" type="button" ${retryDisabled ? "disabled" : ""}>Retry last failed sync</button>` : ""}
       </div>
       ${commitMessageForm}
@@ -312,12 +375,36 @@
       await chrome.runtime.sendMessage({ type: "LEETGIT_SET_PAUSED", paused: newPaused }).catch(() => {});
     });
 
+    const folderSelect = panel.querySelector(".leetgit-folder-select");
+    const folderInput = panel.querySelector(".leetgit-folder-input");
+    folderSelect?.addEventListener("change", () => {
+      if (folderSelect.value === "__new__") {
+        folderInput.style.display = "";
+        folderInput.focus();
+      } else {
+        folderInput.style.display = "none";
+        persistFolder(folderSelect.value);
+      }
+    });
+    folderInput?.addEventListener("blur", () => {
+      const value = folderInput.value.trim();
+      if (value) persistFolder(value);
+    });
+    folderInput?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        folderInput.blur();
+      }
+    });
+
     panel.querySelector('[data-action="retry"]')?.addEventListener("click", async () => {
-      setState("syncing", "Retrying last failed sync...");
+      stageLabel = STAGE_LABEL["pushing"];
+      setState("syncing", "Retrying last failed sync…");
       const response = await chrome.runtime.sendMessage({ type: "LEETGIT_RETRY_LAST_FAILED" }).catch((error) => ({ ok: false, error: error.message }));
       if (!response?.ok) {
         lastError = response?.error || "Retry failed";
-        setState("error", "Retry failed - click for details");
+        stageLabel = null;
+        setState("error", "Couldn't save — retry failed");
         renderPanel();
       } else {
         lastError = "";
@@ -333,23 +420,27 @@
       });
     });
 
-    panel.querySelector('[data-action="custom-message"]')?.addEventListener("click", () => {
-      const form = panel.querySelector(".leetgit-commit-message");
-      form.hidden = false;
-      form.querySelector("textarea").focus();
-    });
-
     panel.querySelector(".leetgit-commit-message")?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const input = panel.querySelector(".leetgit-commit-input");
       const commitMessage = input.value.trim();
       if (!pendingSubmission || !commitMessage) return;
+      await persistFolder(resolveSelectedFolder());
       submitCapturedSubmission({ ...pendingSubmission, commitMessage });
     });
 
-    panel.querySelector('[data-action="sync-template-message"]')?.addEventListener("click", () => {
+    panel.querySelector('[data-action="sync-template-message"]')?.addEventListener("click", async () => {
       if (!pendingSubmission) return;
+      await persistFolder(resolveSelectedFolder());
       submitCapturedSubmission(pendingSubmission);
+    });
+
+    panel.querySelector('[data-action="skip-commit"]')?.addEventListener("click", () => {
+      pendingSubmission = null;
+      stageLabel = null;
+      lastDiagnostic = "";
+      setState("idle", "Submission skipped — not committed");
+      renderPanel();
     });
   }
 
@@ -492,6 +583,16 @@
         font-weight: 600;
         padding: 2px 8px;
         white-space: nowrap;
+        transition: background 200ms, color 200ms, border-color 200ms;
+      }
+      #leetgit-root[data-state="syncing"] .leetgit-pill {
+        background: #ddf4ff; border-color: #79b8ff; color: #0550ae;
+      }
+      #leetgit-root[data-state="synced"] .leetgit-pill {
+        background: #dafbe1; border-color: #4ac26b; color: #1a7f37;
+      }
+      #leetgit-root[data-state="error"] .leetgit-pill {
+        background: #fff5f5; border-color: #fca5a5; color: #cf222e;
       }
 
       /* ── Sync toggle ────────────────────────────────────── */
@@ -597,6 +698,7 @@
       }
       .leetgit-action:hover { background: #eaecef; border-color: #adb5bf; }
       .leetgit-action:disabled { cursor: not-allowed; opacity: 0.5; }
+      .leetgit-action-skip { color: #656d76; flex: 0 0 auto; }
 
       .leetgit-options {
         display: inline-block;
@@ -607,6 +709,35 @@
         text-decoration: none; transition: color 120ms;
       }
       .leetgit-options:hover { color: #1f2328; }
+
+      /* ── Folder picker ──────────────────────────────────── */
+      .leetgit-folder-row {
+        display: flex; align-items: center; gap: 8px;
+        margin-bottom: 10px;
+      }
+      .leetgit-folder-label {
+        font-size: 11px; font-weight: 700; color: #656d76;
+        white-space: nowrap; flex-shrink: 0;
+      }
+      .leetgit-folder-select {
+        flex: 1; min-width: 0;
+        border: 1px solid #d0d7de; border-radius: 6px;
+        background: #f6f8fa; color: #1f2328;
+        padding: 5px 8px; font: inherit; font-size: 12px;
+        cursor: pointer; transition: border-color 150ms;
+      }
+      .leetgit-folder-select:focus {
+        outline: none; border-color: #0969da;
+        box-shadow: 0 0 0 3px rgba(9,105,218,0.18);
+      }
+      .leetgit-folder-input {
+        flex: 1; min-width: 0;
+        border: 1px solid #0969da; border-radius: 6px;
+        background: #ffffff; color: #1f2328;
+        padding: 5px 8px; font: inherit; font-size: 12px;
+        box-shadow: 0 0 0 3px rgba(9,105,218,0.18);
+      }
+      .leetgit-folder-input:focus { outline: none; }
 
       /* ── Commit message form ────────────────────────────── */
       .leetgit-commit-message { margin-top: 12px; }
@@ -672,6 +803,20 @@
 
   function escapeAttribute(value) {
     return escapeHtml(value).replaceAll("`", "&#096;");
+  }
+
+  function resolveSelectedFolder() {
+    const select = panel?.querySelector(".leetgit-folder-select");
+    if (!select) return repo?.subfolder || "";
+    if (select.value === "__new__") {
+      return (panel.querySelector(".leetgit-folder-input")?.value || "").trim();
+    }
+    return select.value;
+  }
+
+  function persistFolder(subfolder) {
+    if (repo) repo = { ...repo, subfolder };
+    return chrome.runtime.sendMessage({ type: "LEETGIT_SET_FOLDER", subfolder }).catch(() => {});
   }
 
   function formatDiagnostic(stage, detail = {}) {
