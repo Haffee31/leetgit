@@ -1,22 +1,33 @@
 (() => {
   const STATE = {
     idle: {
-      label: "LeetGit ready",
-      title: "LeetGit ready"
+      label: "Ready to sync",
+      title: "Ready to sync"
     },
     syncing: {
-      label: "Syncing...",
-      title: "Syncing submission..."
+      label: "Syncing…",
+      title: "Syncing submission…"
     },
     synced: {
-      label: "Synced",
-      title: "Synced"
+      label: "Saved ✓",
+      title: "Saved ✓"
     },
     error: {
-      label: "Sync failed",
-      title: "Sync failed - click for details"
+      label: "Couldn't save",
+      title: "Couldn't save — click for details"
     }
   };
+
+  const STAGE_LABEL = {
+    "submit-seen": "Submitting…",
+    "submission-id-seen": "Checking results…",
+    "result-polling": "Checking results…",
+    "result-poll-error": "Checking results…",
+    "check-complete": "Reading verdict…",
+    "pushing": "Saving to GitHub…"
+  };
+
+  let stageLabel = null;
 
   let currentState = "idle";
   let panelOpen = false;
@@ -39,6 +50,7 @@
     if (event.data?.type === "LEETGIT_PAGE_DIAGNOSTIC") {
       if (isPaused) return;
       lastDiagnostic = formatDiagnostic(event.data.stage, event.data.detail);
+      stageLabel = STAGE_LABEL[event.data.stage] || stageLabel;
       if (event.data.stage === "submit-seen" || event.data.stage === "submission-id-seen") {
         setState("syncing", lastDiagnostic);
       }
@@ -71,6 +83,7 @@
         return;
       }
       pendingSubmission = payload;
+      stageLabel = "Waiting for your message";
       setState("syncing", `Commit message needed for ${payload.titleSlug}`);
       panelOpen = true;
       panel.hidden = false;
@@ -88,45 +101,53 @@
 
   function submitCapturedSubmission(payload) {
     pendingSubmission = null;
-    setState("syncing", `Syncing ${payload.titleSlug}...`);
+    stageLabel = STAGE_LABEL["submit-seen"];
+    setState("syncing", `Submitting ${payload.titleSlug}…`);
     chrome.runtime.sendMessage({
       type: "LEETGIT_SUBMISSION_CAPTURED",
       payload
     }).then((response) => {
       if (!response?.ok) {
-        lastError = response?.error || "Sync failed.";
-        setState("error", "Sync failed - click for details");
+        lastError = response?.error || "Couldn't save.";
+        stageLabel = null;
+        setState("error", "Couldn't save — click for details");
         renderPanel();
         return;
       }
       if (response.result?.skipped) {
+        stageLabel = null;
         const skipTitle = response.result.reason === "duplicate"
-          ? "LeetGit ready — commit skipped (same code & notes)"
-          : `LeetGit ready — skipped (${response.result.reason})`;
+          ? "Ready to sync — commit skipped (same code & notes)"
+          : `Ready to sync — skipped (${response.result.reason})`;
         setState("idle", skipTitle);
         hydrateState();
         return;
       }
-      setState("synced", "Synced ✓");
+      stageLabel = null;
+      setState("synced", "Saved ✓");
       scheduleIdle();
       hydrateState();
     }).catch((error) => {
-      lastError = error.message || "Sync failed.";
-      setState("error", "Sync failed - click for details");
+      lastError = error.message || "Couldn't save.";
+      stageLabel = null;
+      setState("error", "Couldn't save — click for details");
       renderPanel();
     });
   }
 
   chrome.runtime.onMessage.addListener((message) => {
     if (message?.type === "LEETGIT_SYNC_STARTED") {
-      setState("syncing", `Syncing ${message.title || "submission"}...`);
+      stageLabel = STAGE_LABEL["pushing"];
+      setState("syncing", `Saving ${message.title || "submission"} to GitHub…`);
+      renderPanel();
       return;
     }
     if (message?.type === "LEETGIT_SYNC_COMPLETE") {
       recentSyncs = message.recentSyncs || recentSyncs;
       lastFailure = null;
       lastDiagnostic = "";
-      setState("synced", `Synced ✓ ${message.title} (${message.language}, ${message.status})`);
+      stageLabel = null;
+      setState("synced", `Saved ✓ ${message.title} (${message.language}, ${message.status})`);
       scheduleIdle();
       renderPanel();
       return;
@@ -134,11 +155,12 @@
     if (message?.type === "LEETGIT_SYNC_SKIPPED") {
       recentSyncs = message.recentSyncs || recentSyncs;
       lastDiagnostic = "";
+      stageLabel = null;
       const skipTitle = message.reason === "duplicate"
-        ? "LeetGit ready — commit skipped (same code & notes)"
+        ? "Ready to sync — commit skipped (same code & notes)"
         : message.reason === "paused"
-          ? "LeetGit paused — submission not synced"
-          : `LeetGit ready — skipped (${message.reason})`;
+          ? "Paused — submission not synced"
+          : `Ready to sync — skipped (${message.reason})`;
       setState("idle", skipTitle);
       renderPanel();
       return;
@@ -147,7 +169,8 @@
       lastError = message.error || "Unknown error";
       lastFailure = message.failure || null;
       lastDiagnostic = "";
-      setState("error", "Sync failed - click for details");
+      stageLabel = null;
+      setState("error", "Couldn't save — click for details");
       renderPanel();
     }
   });
@@ -221,7 +244,7 @@
       recentSyncs = stateResponse.recentSyncs || [];
       lastFailure = stateResponse.lastFailure || null;
       lastError = lastFailure?.error || "";
-      if (lastFailure) setState("error", "Sync failed - click for details");
+      if (lastFailure) { stageLabel = null; setState("error", "Couldn't save — click for details"); }
     }
     if (configResponse?.ok) {
       const cfg = configResponse.config;
@@ -251,8 +274,8 @@
   }
 
   function buildIdleTitle() {
-    if (!recentSyncs.length) return "LeetGit ready";
-    return `LeetGit ready - Last sync: ${relativeTime(recentSyncs[0].submittedAt)}`;
+    if (!recentSyncs.length) return "Ready to sync";
+    return `Ready to sync — last saved ${relativeTime(recentSyncs[0].submittedAt)}`;
   }
 
   function togglePanel() {
@@ -325,7 +348,7 @@
             <span class="leetgit-sync-toggle-thumb"></span>
           </button>
           <span class="leetgit-sync-toggle-label${isPaused ? " leetgit-sync-toggle-label-off" : ""}">${isPaused ? "OFF" : "ON"}</span>
-          <span class="leetgit-pill">${escapeHtml(STATE[currentState].label)}</span>
+          <span class="leetgit-pill">${escapeHtml(stageLabel || STATE[currentState].label)}</span>
         </div>
       </div>
       ${isPaused ? `<div class="leetgit-paused-notice">Syncing is paused. New submissions will not be committed.</div>` : ""}
@@ -369,11 +392,13 @@
     });
 
     panel.querySelector('[data-action="retry"]')?.addEventListener("click", async () => {
-      setState("syncing", "Retrying last failed sync...");
+      stageLabel = STAGE_LABEL["pushing"];
+      setState("syncing", "Retrying last failed sync…");
       const response = await chrome.runtime.sendMessage({ type: "LEETGIT_RETRY_LAST_FAILED" }).catch((error) => ({ ok: false, error: error.message }));
       if (!response?.ok) {
         lastError = response?.error || "Retry failed";
-        setState("error", "Retry failed - click for details");
+        stageLabel = null;
+        setState("error", "Couldn't save — retry failed");
         renderPanel();
       } else {
         lastError = "";
@@ -551,6 +576,16 @@
         font-weight: 600;
         padding: 2px 8px;
         white-space: nowrap;
+        transition: background 200ms, color 200ms, border-color 200ms;
+      }
+      #leetgit-root[data-state="syncing"] .leetgit-pill {
+        background: #ddf4ff; border-color: #79b8ff; color: #0550ae;
+      }
+      #leetgit-root[data-state="synced"] .leetgit-pill {
+        background: #dafbe1; border-color: #4ac26b; color: #1a7f37;
+      }
+      #leetgit-root[data-state="error"] .leetgit-pill {
+        background: #fff5f5; border-color: #fca5a5; color: #cf222e;
       }
 
       /* ── Sync toggle ────────────────────────────────────── */
