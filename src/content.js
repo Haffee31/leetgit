@@ -30,6 +30,7 @@
   let lastFailure = null;
   let pendingSubmission = null;
   let settings = null;
+  let repo = null;
   let isConnected = null;
   let isPaused = false;
 
@@ -52,7 +53,9 @@
 
   async function handleCapturedSubmission(payload) {
     if (isPaused) return;
-    settings = await chrome.runtime.sendMessage({ type: "LEETGIT_GET_CONFIG" }).then((response) => response.config?.settings).catch(() => null);
+    const cfg = await chrome.runtime.sendMessage({ type: "LEETGIT_GET_CONFIG" }).then((response) => response.config).catch(() => null);
+    settings = cfg?.settings || settings;
+    repo = cfg?.repo || repo;
     if (isPaused) return;
     if (settings?.commitMessageMode === "prompt") {
       const [codeHash, notesHash] = await Promise.all([sha256(payload.code), sha256(payload.notes || "")]);
@@ -150,17 +153,23 @@
   });
 
   chrome.storage.onChanged.addListener((changes) => {
-    if (!changes.settings) return;
-    const newSettings = changes.settings.newValue;
-    if (!newSettings) return;
-    settings = newSettings;
-    const wasPaused = isPaused;
-    isPaused = Boolean(newSettings.paused);
-    if (isPaused && !wasPaused && pendingSubmission) {
-      pendingSubmission = null;
+    if (changes.settings) {
+      const newSettings = changes.settings.newValue;
+      if (newSettings) {
+        settings = newSettings;
+        const wasPaused = isPaused;
+        isPaused = Boolean(newSettings.paused);
+        if (isPaused && !wasPaused && pendingSubmission) {
+          pendingSubmission = null;
+        }
+        if (root) root.dataset.paused = isPaused ? "true" : "false";
+      }
     }
-    if (root) root.dataset.paused = isPaused ? "true" : "false";
-    renderPanel();
+    if (changes.repo) {
+      const newRepo = changes.repo.newValue;
+      if (newRepo) repo = newRepo;
+    }
+    if (changes.settings || changes.repo) renderPanel();
   });
 
   init();
@@ -217,6 +226,7 @@
     if (configResponse?.ok) {
       const cfg = configResponse.config;
       settings = cfg?.settings || null;
+      repo = cfg?.repo || null;
       isConnected = Boolean(cfg?.token && cfg?.repo?.owner && cfg?.repo?.name);
       isPaused = Boolean(settings?.paused);
       if (root) {
@@ -258,6 +268,28 @@
   function renderPanel() {
     if (!panel) return;
     const retryDisabled = currentState === "syncing" || isPaused;
+
+    // Build folder picker options
+    const currentFolder = repo?.subfolder || "";
+    const recentFolders = repo?.recentFolders || [];
+    const folderOptions = [
+      `<option value="">${escapeHtml("(repository root)")}</option>`,
+      ...recentFolders
+        .filter((f) => f !== "")
+        .map((f) => `<option value="${escapeAttribute(f)}" ${f === currentFolder ? "selected" : ""}>${escapeHtml(f)}</option>`),
+      ...(currentFolder && !recentFolders.includes(currentFolder)
+        ? [`<option value="${escapeAttribute(currentFolder)}" selected>${escapeHtml(currentFolder)}</option>`]
+        : []),
+      `<option value="__new__">+ New folder…</option>`
+    ].join("");
+    const folderPicker = `
+      <div class="leetgit-folder-row">
+        <label class="leetgit-folder-label" for="leetgit-folder-select">Commit folder</label>
+        <select class="leetgit-folder-select" id="leetgit-folder-select">${folderOptions}</select>
+        <input class="leetgit-folder-input" type="text" placeholder="folder name" style="display:none">
+      </div>
+    `;
+
     const showCommitForm = settings?.commitMessageMode === "prompt" && pendingSubmission && !isPaused;
     const commitMessageForm = showCommitForm ? `
       <form class="leetgit-commit-message">
@@ -299,6 +331,7 @@
       ${isPaused ? `<div class="leetgit-paused-notice">Syncing is paused. New submissions will not be committed.</div>` : ""}
       ${lastDiagnostic && !isPaused ? `<div class="leetgit-diagnostic">${escapeHtml(lastDiagnostic)}</div>` : ""}
       ${lastError ? `<div class="leetgit-error">${escapeHtml(lastError)}</div>` : ""}
+      ${folderPicker}
       <div class="leetgit-section-title" ${showCommitForm ? "hidden" : ""}>Recent syncs</div>
       <div class="leetgit-list" ${showCommitForm ? "hidden" : ""}>${rows || `<div class="leetgit-empty">No synced submissions yet.</div>`}</div>
       <div class="leetgit-actions" ${showCommitForm ? "hidden" : ""}>
@@ -311,6 +344,28 @@
     panel.querySelector('[data-action="toggle-pause"]')?.addEventListener("click", async () => {
       const newPaused = !isPaused;
       await chrome.runtime.sendMessage({ type: "LEETGIT_SET_PAUSED", paused: newPaused }).catch(() => {});
+    });
+
+    const folderSelect = panel.querySelector(".leetgit-folder-select");
+    const folderInput = panel.querySelector(".leetgit-folder-input");
+    folderSelect?.addEventListener("change", () => {
+      if (folderSelect.value === "__new__") {
+        folderInput.style.display = "";
+        folderInput.focus();
+      } else {
+        folderInput.style.display = "none";
+        persistFolder(folderSelect.value);
+      }
+    });
+    folderInput?.addEventListener("blur", () => {
+      const value = folderInput.value.trim();
+      if (value) persistFolder(value);
+    });
+    folderInput?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        folderInput.blur();
+      }
     });
 
     panel.querySelector('[data-action="retry"]')?.addEventListener("click", async () => {
@@ -339,11 +394,13 @@
       const input = panel.querySelector(".leetgit-commit-input");
       const commitMessage = input.value.trim();
       if (!pendingSubmission || !commitMessage) return;
+      await persistFolder(resolveSelectedFolder());
       submitCapturedSubmission({ ...pendingSubmission, commitMessage });
     });
 
-    panel.querySelector('[data-action="sync-template-message"]')?.addEventListener("click", () => {
+    panel.querySelector('[data-action="sync-template-message"]')?.addEventListener("click", async () => {
       if (!pendingSubmission) return;
+      await persistFolder(resolveSelectedFolder());
       submitCapturedSubmission(pendingSubmission);
     });
 
@@ -611,6 +668,35 @@
       }
       .leetgit-options:hover { color: #1f2328; }
 
+      /* ── Folder picker ──────────────────────────────────── */
+      .leetgit-folder-row {
+        display: flex; align-items: center; gap: 8px;
+        margin-bottom: 10px;
+      }
+      .leetgit-folder-label {
+        font-size: 11px; font-weight: 700; color: #656d76;
+        white-space: nowrap; flex-shrink: 0;
+      }
+      .leetgit-folder-select {
+        flex: 1; min-width: 0;
+        border: 1px solid #d0d7de; border-radius: 6px;
+        background: #f6f8fa; color: #1f2328;
+        padding: 5px 8px; font: inherit; font-size: 12px;
+        cursor: pointer; transition: border-color 150ms;
+      }
+      .leetgit-folder-select:focus {
+        outline: none; border-color: #0969da;
+        box-shadow: 0 0 0 3px rgba(9,105,218,0.18);
+      }
+      .leetgit-folder-input {
+        flex: 1; min-width: 0;
+        border: 1px solid #0969da; border-radius: 6px;
+        background: #ffffff; color: #1f2328;
+        padding: 5px 8px; font: inherit; font-size: 12px;
+        box-shadow: 0 0 0 3px rgba(9,105,218,0.18);
+      }
+      .leetgit-folder-input:focus { outline: none; }
+
       /* ── Commit message form ────────────────────────────── */
       .leetgit-commit-message { margin-top: 12px; }
       .leetgit-commit-input {
@@ -675,6 +761,20 @@
 
   function escapeAttribute(value) {
     return escapeHtml(value).replaceAll("`", "&#096;");
+  }
+
+  function resolveSelectedFolder() {
+    const select = panel?.querySelector(".leetgit-folder-select");
+    if (!select) return repo?.subfolder || "";
+    if (select.value === "__new__") {
+      return (panel.querySelector(".leetgit-folder-input")?.value || "").trim();
+    }
+    return select.value;
+  }
+
+  function persistFolder(subfolder) {
+    if (repo) repo = { ...repo, subfolder };
+    return chrome.runtime.sendMessage({ type: "LEETGIT_SET_FOLDER", subfolder }).catch(() => {});
   }
 
   function formatDiagnostic(stage, detail = {}) {
