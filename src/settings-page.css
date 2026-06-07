@@ -285,6 +285,38 @@ select:focus {
   cursor: pointer;
 }
 
+.check-row input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  display: grid;
+  place-items: center;
+  transition: border-color 150ms;
+}
+.check-row input[type="radio"]::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--leet-green);
+  transform: scale(0);
+  transition: transform 150ms;
+}
+.check-row input[type="radio"]:checked {
+  border-color: var(--leet-green);
+}
+.check-row input[type="radio"]:checked::before {
+  transform: scale(1);
+}
+.check-row input[type="radio"]:focus-visible {
+  outline: 2px solid var(--leet-green);
+  outline-offset: 2px;
+}
+
 .check-sub {
   display: block;
   font-size: 12px;
