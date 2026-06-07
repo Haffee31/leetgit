@@ -437,6 +437,7 @@
 
     panel.querySelector('[data-action="skip-commit"]')?.addEventListener("click", () => {
       pendingSubmission = null;
+      stageLabel = null;
       lastDiagnostic = "";
       setState("idle", "Submission skipped — not committed");
       renderPanel();
