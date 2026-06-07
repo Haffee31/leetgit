@@ -258,11 +258,13 @@
   function renderPanel() {
     if (!panel) return;
     const retryDisabled = currentState === "syncing" || isPaused;
-    const commitMessageForm = settings?.commitMessageMode === "prompt" ? `
-      <form class="leetgit-commit-message" ${pendingSubmission && !isPaused ? "" : "hidden"}>
+    const showCommitForm = settings?.commitMessageMode === "prompt" && pendingSubmission && !isPaused;
+    const commitMessageForm = showCommitForm ? `
+      <form class="leetgit-commit-message">
         <textarea class="leetgit-commit-input" rows="3" placeholder="Commit message for this submission"></textarea>
         <div class="leetgit-actions">
-          <button class="leetgit-action" data-action="sync-custom-message" type="submit">Sync with message</button>
+          <button class="leetgit-action" data-action="sync-custom-message" type="submit">Commit</button>
+          <button class="leetgit-action leetgit-action-skip" data-action="skip-commit" type="button">Skip</button>
           <button class="leetgit-action" data-action="sync-template-message" type="button">Use template</button>
         </div>
       </form>
@@ -297,10 +299,9 @@
       ${isPaused ? `<div class="leetgit-paused-notice">Syncing is paused. New submissions will not be committed.</div>` : ""}
       ${lastDiagnostic && !isPaused ? `<div class="leetgit-diagnostic">${escapeHtml(lastDiagnostic)}</div>` : ""}
       ${lastError ? `<div class="leetgit-error">${escapeHtml(lastError)}</div>` : ""}
-      <div class="leetgit-section-title">Recent syncs</div>
-      <div class="leetgit-list">${rows || `<div class="leetgit-empty">No synced submissions yet.</div>`}</div>
-      <div class="leetgit-actions">
-        ${settings?.commitMessageMode === "prompt" && pendingSubmission && !isPaused ? `<button class="leetgit-action" data-action="custom-message" type="button">Custom commit message</button>` : ""}
+      <div class="leetgit-section-title" ${showCommitForm ? "hidden" : ""}>Recent syncs</div>
+      <div class="leetgit-list" ${showCommitForm ? "hidden" : ""}>${rows || `<div class="leetgit-empty">No synced submissions yet.</div>`}</div>
+      <div class="leetgit-actions" ${showCommitForm ? "hidden" : ""}>
         ${lastFailure ? `<button class="leetgit-action" data-action="retry" type="button" ${retryDisabled ? "disabled" : ""}>Retry last failed sync</button>` : ""}
       </div>
       ${commitMessageForm}
@@ -333,12 +334,6 @@
       });
     });
 
-    panel.querySelector('[data-action="custom-message"]')?.addEventListener("click", () => {
-      const form = panel.querySelector(".leetgit-commit-message");
-      form.hidden = false;
-      form.querySelector("textarea").focus();
-    });
-
     panel.querySelector(".leetgit-commit-message")?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const input = panel.querySelector(".leetgit-commit-input");
@@ -350,6 +345,13 @@
     panel.querySelector('[data-action="sync-template-message"]')?.addEventListener("click", () => {
       if (!pendingSubmission) return;
       submitCapturedSubmission(pendingSubmission);
+    });
+
+    panel.querySelector('[data-action="skip-commit"]')?.addEventListener("click", () => {
+      pendingSubmission = null;
+      lastDiagnostic = "";
+      setState("idle", "Submission skipped — not committed");
+      renderPanel();
     });
   }
 
@@ -597,6 +599,7 @@
       }
       .leetgit-action:hover { background: #eaecef; border-color: #adb5bf; }
       .leetgit-action:disabled { cursor: not-allowed; opacity: 0.5; }
+      .leetgit-action-skip { color: #656d76; flex: 0 0 auto; }
 
       .leetgit-options {
         display: inline-block;
