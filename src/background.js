@@ -112,6 +112,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message?.type === "LEETGIT_SET_FOLDER") {
+    getStoredConfig()
+      .then((config) => {
+        const subfolder = String(message.subfolder || "").trim();
+        const recentFolders = [subfolder, ...(config.repo.recentFolders || [])]
+          .filter((f, i, arr) => arr.indexOf(f) === i)
+          .slice(0, 8);
+        return saveStoredConfig({ repo: { ...config.repo, subfolder, recentFolders } });
+      })
+      .then((config) => sendResponse({ ok: true, config }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+
   if (message?.type !== "LEETGIT_SUBMISSION_CAPTURED") return false;
 
   syncCapturedSubmission(message.payload, sender.tab?.id)

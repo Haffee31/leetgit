@@ -12,7 +12,8 @@ export const DEFAULT_REPO = {
   owner: "",
   name: "",
   branch: "main",
-  subfolder: ""
+  subfolder: "",
+  recentFolders: []
 };
 
 export async function getStoredConfig() {
