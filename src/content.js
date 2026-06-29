@@ -46,6 +46,20 @@
   let isConnected = null;
   let isPaused = false;
 
+  // ── Difficulty masking state ───────────────────────────────────────
+  let lastPath = location.pathname;
+  let diffObserver = null;
+  let diffObserverPending = false;
+
+  // Early mask: read storage directly (no service-worker round-trip) so the
+  // attribute + CSS land before LeetCode's first paint, preventing FOUC.
+  chrome.storage.local.get(["settings"], (stored) => {
+    if (stored?.settings?.hideDifficulty) {
+      document.documentElement.setAttribute("data-leetgit-hide-diff", "true");
+      injectStyles();
+    }
+  });
+
   window.addEventListener("message", (event) => {
     if (event.source !== window) return;
     if (event.data?.type === "LEETGIT_PAGE_DIAGNOSTIC") {
