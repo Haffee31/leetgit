@@ -28,6 +28,7 @@ No copy-paste, no manual uploads. Solve a problem, get a commit. Your entire Lee
 - **Flexible commit messages** — Use a template with `{number}`, `{title}`, `{language}`, `{status}`, `{difficulty}`, or write a custom message per submission
 - **Sync filtering** — Choose which outcomes trigger commits (Accepted only, or include WA / TLE / etc.)
 - **Subfolder support** — Nest all solutions under a custom path inside your repo (e.g. `solutions/`)
+- **Hide difficulty** — Opt-in focus mode that masks the Easy / Medium / Hard badge so you attempt problems blind; click the badge to peek, navigate away to re-mask
 - **Settings backup** — Export, import, or wipe your configuration at any time
 - **Token expiry warning** — The popup surfaces a warning before your GitHub token expires
 
@@ -150,6 +151,7 @@ That's it. Solve a problem on LeetCode and watch the commit land in your repo.
 | Pause / resume | Toggle the ON/OFF switch in the popup or the floating panel |
 | Retry a failed sync | Click **Retry last failed sync** in the floating panel |
 | Custom commit message | Enable "Ask me every time" in Settings → a text box appears after each submission |
+| Hide / peek difficulty | Enable in Settings → Focus; click the badge on any problem page to temporarily reveal it |
 | Open Settings | Click **Settings** in the popup or the floating panel |
 
 ---
@@ -168,6 +170,7 @@ That's it. Solve a problem on LeetCode and watch the commit land in your repo.
 | Commit message template | `Solve {number}. {title} ({language})` | Variables: `{number}` `{title}` `{language}` `{status}` `{difficulty}` |
 | Glow on success | On | The floating button pulses green after a successful commit |
 | Notify on failure | On | Shows a browser notification if a sync fails |
+| Hide problem difficulty | Off | Masks the Easy / Medium / Hard badge on problem pages; click the badge to peek, re-masks on navigation |
 
 ---
 
