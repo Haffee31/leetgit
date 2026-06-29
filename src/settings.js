@@ -5,7 +5,8 @@ export const DEFAULT_SETTINGS = {
   commitMessageTemplate: "Solve {number}. {title} ({language})",
   glowOnSuccess: true,
   notifyOnFailure: true,
-  paused: false
+  paused: false,
+  hideDifficulty: false
 };
 
 export const DEFAULT_REPO = {

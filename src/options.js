@@ -20,6 +20,7 @@ const commitModeInputs = document.querySelectorAll('input[name="commit-mode"]');
 const commitTemplateInput = document.getElementById("commit-template");
 const glowInput = document.getElementById("glow-on-success");
 const failureInput = document.getElementById("notify-on-failure");
+const hideDifficultyInput = document.getElementById("hide-difficulty");
 const navItems = document.querySelectorAll(".nav-item");
 const panes = document.querySelectorAll(".section-pane");
 
@@ -100,6 +101,7 @@ function bindAutoSave() {
 
   glowInput.addEventListener("change", () => save("notifications"));
   failureInput.addEventListener("change", () => save("notifications"));
+  hideDifficultyInput.addEventListener("change", () => save("focus"));
 }
 
 async function save(section) {
@@ -172,6 +174,7 @@ async function loadConfig() {
   }
   glowInput.checked = Boolean(loadedConfig.settings.glowOnSuccess);
   failureInput.checked = Boolean(loadedConfig.settings.notifyOnFailure);
+  hideDifficultyInput.checked = Boolean(loadedConfig.settings.hideDifficulty);
   for (const input of statusChecks.querySelectorAll("input")) {
     input.checked = loadedConfig.settings.syncStatuses.includes(input.value);
   }
@@ -205,6 +208,7 @@ function readFormConfig() {
       commitMessageTemplate: commitTemplateInput.value.trim() || "Solve {number}. {title} ({language})",
       glowOnSuccess: glowInput.checked,
       notifyOnFailure: failureInput.checked,
+      hideDifficulty: hideDifficultyInput.checked,
       paused: loadedConfig?.settings?.paused ?? false
     }
   };

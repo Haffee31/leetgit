@@ -46,6 +46,20 @@
   let isConnected = null;
   let isPaused = false;
 
+  // ── Difficulty masking state ───────────────────────────────────────
+  let lastPath = location.pathname;
+  let diffObserver = null;
+  let diffObserverPending = false;
+
+  // Early mask: read storage directly (no service-worker round-trip) so the
+  // attribute + CSS land before LeetCode's first paint, preventing FOUC.
+  chrome.storage.local.get(["settings"], (stored) => {
+    if (stored?.settings?.hideDifficulty) {
+      document.documentElement.setAttribute("data-leetgit-hide-diff", "true");
+      injectStyles();
+    }
+  });
+
   window.addEventListener("message", (event) => {
     if (event.source !== window) return;
     if (event.data?.type === "LEETGIT_PAGE_DIAGNOSTIC") {
@@ -196,6 +210,9 @@
           pendingSubmission = null;
         }
         if (root) root.dataset.paused = isPaused ? "true" : "false";
+        // Re-apply mask immediately; clear any peek so the new state is authoritative.
+        document.documentElement.removeAttribute("data-leetgit-peek");
+        applyDifficultyMask();
       }
     }
     if (changes.repo) {
@@ -236,6 +253,7 @@
     root.classList.add("leetgit-fixed");
     setState("idle");
     hydrateState();
+    startDifficultyObserver();
     document.addEventListener("click", (event) => {
       if (panelOpen && root && !root.contains(event.target)) {
         panelOpen = false;
@@ -243,6 +261,20 @@
         lastDiagnostic = "";
       }
     });
+    // Difficulty badge peek toggle — capture phase so it fires before LeetCode handlers.
+    document.addEventListener("click", (event) => {
+      if (!settings?.hideDifficulty) return;
+      const badge = event.target.closest('[class*="text-difficulty-"], .leetgit-diff-badge');
+      if (!badge) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const peeking = document.documentElement.hasAttribute("data-leetgit-peek");
+      if (peeking) {
+        document.documentElement.removeAttribute("data-leetgit-peek");
+      } else {
+        document.documentElement.setAttribute("data-leetgit-peek", "true");
+      }
+    }, true);
   }
 
   async function hydrateState() {
@@ -266,6 +298,7 @@
         root.dataset.connected = isConnected ? "true" : "false";
         root.dataset.paused = isPaused ? "true" : "false";
       }
+      applyDifficultyMask();
     }
     renderPanel();
   }
@@ -448,6 +481,51 @@
     });
   }
 
+
+  // ── Difficulty masking ─────────────────────────────────────────────
+  const DIFFICULTY_WORDS = new Set(["Easy", "Medium", "Hard"]);
+
+  function tagBadges() {
+    // Primary: LeetCode's stable utility class pattern.
+    const primary = document.querySelectorAll('[class*="text-difficulty-"]');
+    for (const el of primary) el.classList.add("leetgit-diff-badge");
+
+    // Fallback: small elements whose text is exactly a difficulty word (catches class drift).
+    const candidates = document.querySelectorAll("span, a, div");
+    for (const el of candidates) {
+      if (DIFFICULTY_WORDS.has(el.textContent.trim()) && !el.querySelector("*")) {
+        el.classList.add("leetgit-diff-badge");
+      }
+    }
+  }
+
+  function applyDifficultyMask() {
+    if (settings?.hideDifficulty) {
+      document.documentElement.setAttribute("data-leetgit-hide-diff", "true");
+    } else {
+      document.documentElement.removeAttribute("data-leetgit-hide-diff");
+      document.documentElement.removeAttribute("data-leetgit-peek");
+    }
+    tagBadges();
+  }
+
+  function startDifficultyObserver() {
+    if (diffObserver) return;
+    diffObserver = new MutationObserver(() => {
+      if (diffObserverPending) return;
+      diffObserverPending = true;
+      requestAnimationFrame(() => {
+        diffObserverPending = false;
+        // Detect SPA navigation — reset peek for new problem.
+        if (location.pathname !== lastPath) {
+          lastPath = location.pathname;
+          document.documentElement.removeAttribute("data-leetgit-peek");
+        }
+        tagBadges();
+      });
+    });
+    diffObserver.observe(document.documentElement, { childList: true, subtree: true });
+  }
 
   function injectStyles() {
     if (document.getElementById("leetgit-styles")) return;
@@ -763,6 +841,79 @@
       @keyframes leetgit-pulse {
         0%, 100% { box-shadow: 0 0 0 0 rgba(9,105,218,0.22), 0 8px 24px rgba(31,35,40,0.1); }
         50%       { box-shadow: 0 0 0 6px rgba(9,105,218,0), 0 8px 24px rgba(31,35,40,0.1); }
+      }
+
+      /* ── Difficulty mask ────────────────────────────────── */
+      /* Pointer cursor + relative positioning for both masked and peeked states. */
+      html[data-leetgit-hide-diff="true"] [class*="text-difficulty-"],
+      html[data-leetgit-hide-diff="true"] .leetgit-diff-badge {
+        position: relative !important;
+        cursor: pointer !important;
+      }
+      html[data-leetgit-hide-diff="true"]:not([data-leetgit-peek]) [class*="text-difficulty-"],
+      html[data-leetgit-hide-diff="true"]:not([data-leetgit-peek]) .leetgit-diff-badge {
+        min-width: 72px !important;
+        color: transparent !important;
+        background: #e2e2ea !important;
+        border-color: transparent !important;
+        border-radius: 999px !important;
+        user-select: none !important;
+      }
+      html.dark[data-leetgit-hide-diff="true"]:not([data-leetgit-peek]) [class*="text-difficulty-"],
+      html.dark[data-leetgit-hide-diff="true"]:not([data-leetgit-peek]) .leetgit-diff-badge {
+        background: #3a3a4a !important;
+      }
+      html[data-leetgit-hide-diff="true"]:not([data-leetgit-peek]) [class*="text-difficulty-"] > *,
+      html[data-leetgit-hide-diff="true"]:not([data-leetgit-peek]) .leetgit-diff-badge > * {
+        visibility: hidden !important;
+      }
+      html[data-leetgit-hide-diff="true"]:not([data-leetgit-peek]) [class*="text-difficulty-"]::after,
+      html[data-leetgit-hide-diff="true"]:not([data-leetgit-peek]) .leetgit-diff-badge::after {
+        content: "Hidden" !important;
+        position: absolute !important;
+        inset: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        color: #9a9ab0 !important;
+        letter-spacing: 0.02em !important;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%239a9ab0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94'/%3E%3Cpath d='M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19'/%3E%3Cline x1='1' y1='1' x2='23' y2='23'/%3E%3C/svg%3E") !important;
+        background-repeat: no-repeat !important;
+        background-position: center left 10px !important;
+        background-size: 13px 13px !important;
+        padding-left: 22px !important;
+      }
+      /* Tooltip shared styles */
+      html[data-leetgit-hide-diff="true"] [class*="text-difficulty-"]:hover::before,
+      html[data-leetgit-hide-diff="true"] .leetgit-diff-badge:hover::before {
+        position: absolute !important;
+        bottom: calc(100% + 6px) !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        padding: 3px 8px !important;
+        border-radius: 4px !important;
+        background: rgba(0,0,0,0.72) !important;
+        color: #fff !important;
+        font-size: 11px !important;
+        font-weight: 500 !important;
+        white-space: nowrap !important;
+        pointer-events: none !important;
+        z-index: 2147483646 !important;
+      }
+      html[data-leetgit-hide-diff="true"]:not([data-leetgit-peek]) [class*="text-difficulty-"]:hover::before,
+      html[data-leetgit-hide-diff="true"]:not([data-leetgit-peek]) .leetgit-diff-badge:hover::before {
+        content: "Click to reveal" !important;
+      }
+      html[data-leetgit-hide-diff="true"][data-leetgit-peek] [class*="text-difficulty-"]:hover::before,
+      html[data-leetgit-hide-diff="true"][data-leetgit-peek] .leetgit-diff-badge:hover::before {
+        content: "Click to hide" !important;
+      }
+      html.dark[data-leetgit-hide-diff="true"]:not([data-leetgit-peek]) [class*="text-difficulty-"]::after,
+      html.dark[data-leetgit-hide-diff="true"]:not([data-leetgit-peek]) .leetgit-diff-badge::after {
+        color: #b0b0c8 !important;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%23b0b0c8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94'/%3E%3Cpath d='M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19'/%3E%3Cline x1='1' y1='1' x2='23' y2='23'/%3E%3C/svg%3E") !important;
       }
     `;
     document.documentElement.appendChild(style);
