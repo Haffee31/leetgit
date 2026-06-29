@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Background: white rounded square with subtle border -->
+  <rect width="512" height="512" rx="88" fill="#ffffff"/>
+  <rect width="512" height="512" rx="88" fill="none" stroke="#e2e8f0" stroke-width="8"/>
+
+  <!-- L: LeetCode orange -->
+  <rect x="48" y="128" width="56" height="256" rx="12" fill="#ffa116"/>
+  <rect x="48" y="328" width="176" height="56" rx="12" fill="#ffa116"/>
+
+  <!-- G: GitHub dark slate -->
+  <!-- center (380, 256), radius 100, stroke-width 56 -->
+  <!-- start ≈ (444, 180), end = (480, 256), crossbar to center -->
+  <path d="M 444 180 A 100 100 0 1 0 480 256 L 380 256"
+        fill="none" stroke="#24292f" stroke-width="56"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
